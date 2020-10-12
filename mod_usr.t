@@ -278,7 +278,8 @@ contains
        ! Set initial density
        w(ixI^S,rho_) = dmdot / (4.0d0*dpi * x(ixI^S,1)**2.0d0 * w(ixI^S,mom(1)))
     endwhere
-    
+
+    ! Convert hydro vars to conserved to let AMRVAC do computations
     call hd_to_conserved(ixI^L,ixO^L,w,x)
     
     w(ixO^S,my_gcak) = 0.0d0 ! CAK line-force
@@ -302,6 +303,7 @@ contains
     ! Local variable
     integer :: i
 
+    ! Convert hydro vars to primitive
     call hd_to_primitive(ixI^L,ixI^L,w,x)
     
     select case (iB)
@@ -322,8 +324,8 @@ contains
       enddo
 
       !
-      ! Prohibit ghosts to be supersonic, if so put on sound speed momentum
-      ! Also avoid overloading too much, limit to negative sound speed momentum
+      ! Prohibit ghosts to be supersonic, if so put on sound speed
+      ! Also avoid overloading too much, limit to negative sound speed
       !  
       w(ixB^S,mom(1)) = min(w(ixB^S,mom(1)), dasound)   
       w(ixB^S,mom(1)) = max(w(ixB^S,mom(1)), -dasound)
@@ -336,6 +338,7 @@ contains
       call mpistop("BC not specified")
     end select
 
+    ! Convert hydro vars back to conserved to let AMRVAC do computations
     call hd_to_conserved(ixI^L,ixI^L,w,x)
 
   end subroutine special_bound
