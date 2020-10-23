@@ -179,7 +179,7 @@ contains
       call date_and_time(todayis)
       print*, 'MPI-AMRVAC simulation ran on ', &
                     todayis(7:8), '/', todayis(5:6), '/', todayis(1:4)
-      print*,
+      print*
       print*, '======================'
       print*, '   Unity quantities   '
       print*, '======================'
@@ -190,7 +190,7 @@ contains
       print*, 'unit pressure      = ', unit_pressure
       print*, 'unit temperature   = ', unit_temperature
       print*, 'unit time          = ', unit_time
-      print*,
+      print*
       print*, '==============================================='
       print*, '   Stellar and wind parameters in CGS units    '
       print*, '==============================================='
@@ -204,7 +204,7 @@ contains
       print*, 'eff. scale height heff = ', heff
       print*, 'heff/Rstar             = ', heff/rstar
       print*, 'Eddington gamma        = ', gammae
-      print*,
+      print*, '\n'
       print*, 'adiabatic gamma = ', hd_gamma
       print*, 'alpha           = ', alpha
       print*, 'Qbar            = ', Qbar
@@ -213,7 +213,7 @@ contains
       print*, 'asound          = ', asound
       print*, 'eff. vesc       = ', vesc
       print*, 'vinf            = ', vinf
-      print*,
+      print*
       print*, 'wind option            = ', ifrc
       print*, '   0 : radial stream CAK '
       print*, '   1 : CAK + fd          '
@@ -221,7 +221,7 @@ contains
       print*, 'surface density        = ', rhobound
       print*, 'analytic Mdot CAK      = ', mdot * (year/msun)
       print*, '... with FD correction = ', mdotfd * (year/msun)
-      print*,
+      print*
       print*, '========================================'
       print*, '    Dimensionless AMRVAC quantities     '
       print*, '========================================'
@@ -246,7 +246,7 @@ contains
       print*, 'vinf         = ', dvinf
       print*, 'clight       = ', dclight
       print*, 'Ggrav        = ', dGgrav
-      print*,
+      print*
     endif
 
   end subroutine initglobaldata_usr
@@ -266,7 +266,6 @@ contains
 
     ! Local variables
     real(8) :: sfac
-    integer :: i
 
     ! Small offset (asound/vinf) to avoid starting at terminal wind speed
     sfac = 1.0d0 - 1.0d-3**(1.0d0/beta)
@@ -364,7 +363,7 @@ contains
     real(8) :: beta_fd(ixI^S), fdfac(ixI^S), timedum(ixO^S)
     real(8) :: taum(ixI^S), taumfac(ixI^S)
     real(8) :: fac, fac1, fac2
-    integer :: i, jx^L, hx^L
+    integer :: jx^L, hx^L
 
     !========================================================================
     ! Convert to primitives
@@ -401,7 +400,7 @@ contains
     dvdr(ixO^S) = abs(dvdr_down(ixO^S) + dvdr_cent(ixO^S) + dvdr_up(ixO^S))
 
     ! Finite disk factor parameterisation (Owocki & Puls 1996)
-    beta_fd(ixO^S) = (1.0d0 - vr(ixO^S)/ (x(ixO^S,1) * dvdr(ixO^S))) &
+    beta_fd(ixO^S) = (1.0d0 - vr(ixO^S) / (x(ixO^S,1) * dvdr(ixO^S))) &
                       * (drstar/x(ixO^S,1))**2.0d0
 
     ! Check the finite disk array and determine finite disk factor
