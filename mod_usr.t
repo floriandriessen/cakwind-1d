@@ -71,7 +71,7 @@ module mod_usr
   integer :: my_gcak, my_fdf
 
   ! Wind options and avoid magic numbers for wind option
-  integer :: ifrc 
+  integer :: ifrc
   integer, parameter :: radstream = 0, finite_disk = 1, finite_disk_cutoff = 2
 
   character(len=8) :: todayis
@@ -204,7 +204,7 @@ contains
       print*, 'eff. scale height heff = ', heff
       print*, 'heff/Rstar             = ', heff/rstar
       print*, 'Eddington gamma        = ', gammae
-      print*, '\n'
+      print*
       print*, 'adiabatic gamma = ', hd_gamma
       print*, 'alpha           = ', alpha
       print*, 'Qbar            = ', Qbar
@@ -280,7 +280,7 @@ contains
 
     ! Convert hydro vars to conserved to let AMRVAC do computations
     call hd_to_conserved(ixI^L,ixO^L,w,x)
-    
+
     w(ixO^S,my_gcak) = 0.0d0 ! CAK line-force
     w(ixO^S,my_fdf)  = 0.0d0 ! Finite disk factor
 
@@ -293,7 +293,7 @@ contains
     ! Modified boundary values only at lower radial boundary (star)
     !
     use mod_global_parameters
-    
+
     ! Subroutine arguments
     integer, intent(in)    :: ixI^L, ixB^L, iB
     real(8), intent(in)    :: qt, x(ixI^S,1:ndim)
@@ -304,11 +304,11 @@ contains
 
     ! Convert hydro vars to primitive
     call hd_to_primitive(ixI^L,ixI^L,w,x)
-    
+
     select case (iB)
 
     case(1) ! Left boundary (stellar surface)
-       
+
       w(ixB^S,rho_) = drhobound
 
       ! Radial velocity field (constant slope extrapolation)
@@ -325,8 +325,8 @@ contains
       !
       ! Prohibit ghosts to be supersonic, if so put on sound speed
       ! Also avoid overloading too much, limit to negative sound speed
-      !  
-      w(ixB^S,mom(1)) = min(w(ixB^S,mom(1)), dasound)   
+      !
+      w(ixB^S,mom(1)) = min(w(ixB^S,mom(1)), dasound)
       w(ixB^S,mom(1)) = max(w(ixB^S,mom(1)), -dasound)
 
     !
