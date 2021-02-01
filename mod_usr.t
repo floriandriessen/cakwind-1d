@@ -80,8 +80,6 @@ contains
 
   !> This routine should set user methods, and activate the physics module
   subroutine usr_init()
-    use mod_global_parameters
-    use mod_usr_methods
 
     ! Choose coordinate system: 1D spherical
     call set_coordinate_system("spherical")
@@ -126,7 +124,6 @@ contains
 !===============================================================================
 
   subroutine usr_params_read(files)
-    use mod_global_parameters, only: unitpar
 
     character(len=*), intent(in) :: files(:)
     integer :: n
@@ -153,8 +150,6 @@ contains
     !
     ! Compute some quantities of interest (in CGS) before making unitless
     !
-    use mod_global_parameters
-    use mod_constants
 
     ! Stellar structure
     gammae = kappae * lstar/(4.0d0*dpi * Ggrav * mstar * const_c)
@@ -257,7 +252,6 @@ contains
     !
     ! Initial conditions start from beta velocity law
     !
-    use mod_global_parameters
 
     ! Subroutine arguments
     integer, intent(in)    :: ixI^L, ixO^L
@@ -292,7 +286,6 @@ contains
     !
     ! Modified boundary values only at lower radial boundary (star)
     !
-    use mod_global_parameters
 
     ! Subroutine arguments
     integer, intent(in)    :: ixI^L, ixB^L, iB
@@ -348,7 +341,6 @@ contains
     !
     ! Compute the analytical CAK line-force
     !
-    use mod_global_parameters
 
     ! Subroutine arguments
     integer, intent(in)    :: ixI^L, ixO^L, iw^LIM
@@ -474,7 +466,6 @@ contains
     !
     ! After first iteration assign the new time-step of computation CAK force
     !
-    use mod_global_parameters
 
     ! Subroutine arguments
     integer, intent(in)    :: ixI^L, ixO^L
@@ -495,7 +486,6 @@ contains
     ! Normalize quantities in use to unit quantities defined and computed
     ! These quantities are actually used by AMRVAC in its computations!
     !
-    use mod_global_parameters
 
     ! From the AMRVAC unit variables compute some extra relevant for us
     my_unit_ggrav = unit_density * unit_time**2.0d0
