@@ -42,7 +42,8 @@ module mod_usr
   implicit none
 
   ! The usual suspects
-  real(8) :: msun=1.989d33, lsun=3.827d33, rsun=6.96d10, Ggrav=6.67d-8
+  real(8), parameter :: msun=1.989d33, lsun=3.827d33, rsun=6.96d10, &
+                        Ggrav=6.67d-8, kappae=0.34d0
 
   ! Stellar parameters: luminosity, mass, radius, surface density, eff. temp.
   real(8) :: lstar, mstar, rstar, rhobound, twind
@@ -51,11 +52,10 @@ module mod_usr
   real(8) :: my_unit_ggrav, my_unit_lum, my_unit_mass
 
   !
-  ! Wind parameters: CAK alpha, Gayley Qbar + Qmax, opacity electron scattering,
-  !                  beta power velocity law, Eddington gamma, escape speed,
-  !                  CAK + fd mass-loss rate, terminal wind speed, sound speed
-  real(8) :: alpha, Qbar, Qmax, kappae, beta, gammae, vesc, mdot, mdotfd, &
-             vinf, asound
+  ! Wind parameters: CAK alpha, Gayley Qbar + Qmax, beta power velocity law,
+  !                  Eddington gamma, escape speed, CAK + fd mass-loss rate,
+  !                  terminal wind speed, sound speed
+  real(8) :: alpha, Qbar, Qmax, beta, gammae, vesc, mdot, mdotfd, vinf, asound
 
   ! Dimensionless variables of relevant variables
   real(8) :: dlstar, dmstar, drstar, drhobound, dtwind, dkappae, dvesc, &
@@ -129,7 +129,7 @@ contains
     integer :: n
 
     namelist /star_list/ mstar, lstar, rstar, twind, rhobound, alpha, &
-                          Qbar, Qmax, kappae, beta, ifrc
+                          Qbar, Qmax, beta, ifrc
 
     do n = 1,size(files)
        open(unitpar, file=trim(files(n)), status="old")
