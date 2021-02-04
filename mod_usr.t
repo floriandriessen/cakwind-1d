@@ -73,13 +73,10 @@ module mod_usr
   ! log(g), eff. log(g), scale height, year (s), mean molecular weight
   real(8) :: logg, logge, heff, year=3.15567d7, mumol
 
-  ! Time-step after first iteration taking into account CAK radiation force
-  real(8) :: new_timestep
-
   ! New variables to store in conservative variables array 'w'
   integer :: my_gcak, my_fdf
 
-  ! Wind options and avoid magic numbers for wind option
+  ! Wind options
   integer :: ifrc
 
   character(len=8) :: todayis
@@ -99,31 +96,19 @@ contains
     ! Choose independent normalization units, only 3 have to be specified:
     !     (length,temp,ndens) or (length,vel,ndens)
     ! Numberdensity chosen such that unit density becomes boundary density
-    ! IMPORTANT: simulations cannot be run in CGS units <=> unit quantities = 1
     !
     unit_length        = rstar                                        ! cm
     unit_temperature   = twind                                        ! K
     unit_numberdensity = rhobound/((1.0d0+4.0d0*He_abundance)*mp_cgs) ! g cm^-3
 
-    ! Activate the physics module
     call HD_activate()
 
-    ! Initialize user (global) quantities after initializing AMRVAC
     usr_set_parameters => initglobaldata_usr
-
-    ! Initial conditions
-    usr_init_one_grid => initial_conditions
-
-    ! Special Boundary conditions
-    usr_special_bc => special_bound
-
-    usr_gravity => effective_gravity
-
-    ! CAK force computation
-    usr_source => CAK_source
-
-    ! Adjusted timestep to account for CAK force
-    usr_get_dt => special_dt
+    usr_init_one_grid  => initial_conditions
+    usr_special_bc     => special_bound
+    usr_gravity        => effective_gravity
+    usr_source         => CAK_source
+    usr_get_dt         => special_dt
 
     ! Define user custom variables to store extra computations in output
     my_gcak = var_set_extravar("gcak", "gcak")
@@ -363,10 +348,9 @@ contains
     real(8), intent(inout) :: w(ixI^S,1:nw)
 
     ! Local variables
-    real(8) :: dvdr_up(ixO^S), dvdr_down(ixO^S), dvdr_cent(ixO^S), dvdr(ixO^S)
-    real(8) :: gcak(ixO^S), geff(ixO^S)
     real(8) :: vr(ixI^S), rho(ixI^S)
-    real(8) :: beta_fd(ixO^S), fdfac(ixO^S), timedum(ixO^S)
+    real(8) :: dvdr_up(ixO^S), dvdr_down(ixO^S), dvdr_cent(ixO^S), dvdr(ixO^S)
+    real(8) :: gcak(ixO^S), geff(ixO^S), beta_fd(ixO^S), fdfac(ixO^S)
     real(8) :: taum(ixO^S), taumfac(ixO^S)
     real(8) :: fac, fac1, fac2
     integer :: jx^L, hx^L
@@ -381,7 +365,6 @@ contains
     rho(ixI^S) = wCT(ixI^S,rho_)
 
     !========================================================================
-
     !
     ! Make new indices covering whole grid by increasing +1 (j) and decreasing
     ! by -1 (h). Special, fancy syntax that AMRVAC understands
@@ -391,16 +374,16 @@ contains
 
     ! Get dv/dr on non-uniform grid according to Sundqvist & Veronis (1970)
     ! Forward difference
-    dvdr_up(ixO^S)   = (x(ixO^S,1) - x(hx^S,1)) * vr(jx^S) &
-                        / ((x(jx^S,1) - x(ixO^S,1)) * (x(jx^S,1) - x(hx^S,1)))
+    dvdr_up(ixO^S) = (x(ixO^S,1) - x(hx^S,1)) * vr(jx^S) &
+                     / ((x(jx^S,1) - x(ixO^S,1)) * (x(jx^S,1) - x(hx^S,1)))
 
     ! Backward difference
     dvdr_down(ixO^S) = -(x(jx^S,1) - x(ixO^S,1)) * vr(hx^S) &
                         / ((x(ixO^S,1) - x(hx^S,1)) * (x(jx^S,1) - x(hx^S,1)))
 
     ! Central difference
-    dvdr_cent(ixO^S)  = (x(jx^S,1) + x(hx^S,1) - 2.0d0*x(ixO^S,1)) * vr(ixO^S) &
-                        / ((x(ixO^S,1) - x(hx^S,1)) * (x(jx^S,1) - x(ixO^S,1)))
+    dvdr_cent(ixO^S) = (x(jx^S,1) + x(hx^S,1) - 2.0d0*x(ixO^S,1)) * vr(ixO^S) &
+                       / ((x(ixO^S,1) - x(hx^S,1)) * (x(jx^S,1) - x(ixO^S,1)))
 
     ! Total gradient (in CAK this has to be >0, otherwise stagnant flow)
     dvdr(ixO^S) = abs(dvdr_down(ixO^S) + dvdr_cent(ixO^S) + dvdr_up(ixO^S))
@@ -426,9 +409,6 @@ contains
       endwhere
     endif
 
-    ! Fill up the empty finite disk correction array variable
-    w(ixO^S,my_fdf) = fdfac(ixO^S)
-
     ! Calculate CAK line-force
     fac1 = 1.0d0/(1.0d0 - alpha) * dkappae * dlstar*Qbar/(4.0d0*dpi * dclight)
     fac2 = 1.0d0/(dclight * Qbar * dkappae)**alpha
@@ -439,9 +419,9 @@ contains
     ! Based on wind option proceed now
     if (ifrc == 0) then
       gcak(ixO^S) = gcak(ixO^S) * fdfac(ixO^S)
-    else if (ifrc == 1) then
+    elseif (ifrc == 1) then
       gcak(ixO^S) = gcak(ixO^S) * fdfac(ixO^S)
-    else if (ifrc == 2) then
+    elseif (ifrc == 2) then
       taum(ixO^S) = dkappae * dclight * Qmax * rho(ixO^S)/dvdr(ixO^S)
 
       taumfac(ixO^S) = ((1.0d0 + taum(ixO^S))**(1.0d0 - alpha) - 1.0d0) &
@@ -452,11 +432,12 @@ contains
       stop 'Error in wind option, take a valid ifrc=0,1,2'
     endif
 
-    ! Fill the empty CAK array variable
+    ! Fill the nwextra slots for output
     w(ixO^S,my_gcak) = gcak(ixO^S)
+    w(ixO^S,my_fdf)  = fdfac(ixO^S)
 
     ! Update conservative vars: w = w + qdt*gsource
-    w(ixO^S,mom(1)) = w(ixO^S,mom(1)) + qdt * gcak(ixO^S)*wCT(ixO^S,rho_)
+    w(ixO^S,mom(1)) = w(ixO^S,mom(1)) + qdt * gcak(ixO^S) * wCT(ixO^S,rho_)
 
   end subroutine CAK_source
 
@@ -464,7 +445,7 @@ contains
 
   subroutine special_dt(w,ixI^L,ixO^L,dtnew,dx^D,x)
     !
-    ! After first iteration teh usr_source routine has been called, take now
+    ! After first iteration the usr_source routine has been called, take now
     ! also timestep from CAK line force into account
     !
 
