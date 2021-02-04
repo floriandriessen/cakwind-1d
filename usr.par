@@ -25,7 +25,7 @@
 
 &stoplist
   dtmin    = 1.d-20
-  time_max = 2.0d0
+  time_max = 1.0d0
 /
 
 &methodlist
@@ -66,7 +66,6 @@
   alpha    = 0.65d0
   Qbar     = 2000.0d0
   Qmax     = 0.00395d0
-  kappae   = 0.34d0
   beta     = 0.8d0
-  ifrc     = 2
+  ifrc     = 1
 /
