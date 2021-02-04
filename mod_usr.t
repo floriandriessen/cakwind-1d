@@ -78,7 +78,6 @@ module mod_usr
 
   ! Wind options and avoid magic numbers for wind option
   integer :: ifrc
-  integer, parameter :: radstream = 0, finite_disk = 1, finite_disk_cutoff = 2
 
   character(len=8) :: todayis
 
@@ -433,11 +432,11 @@ contains
     gcak(ixO^S) = fac/x(ixO^S,1)**2.0d0 * (dvdr(ixO^S)/rho(ixO^S))**alpha
 
     ! Based on wind option proceed now
-    if (ifrc == radstream) then
+    if (ifrc == 0) then
       gcak(ixO^S) = gcak(ixO^S) * fdfac(ixO^S)
-    else if (ifrc == finite_disk) then
+    else if (ifrc == 1) then
       gcak(ixO^S) = gcak(ixO^S) * fdfac(ixO^S)
-    else if (ifrc == finite_disk_cutoff) then
+    else if (ifrc == 2) then
       taum(ixO^S) = dkappae * dclight * Qmax * rho(ixO^S)/dvdr(ixO^S)
 
       taumfac(ixO^S) = ((1.0d0 + taum(ixO^S))**(1.0d0 - alpha) - 1.0d0) &
@@ -445,7 +444,7 @@ contains
 
       gcak(ixO^S) = gcak(ixO^S) * fdfac(ixO^S) * taumfac(ixO^S)
     else
-      stop 'Error in wind option, take a valid ifrc {0,1,2}'
+      stop 'Error in wind option, take a valid ifrc=0,1,2'
     endif
 
     ! Fill the empty CAK array variable
