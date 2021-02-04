@@ -406,13 +406,7 @@ contains
       elsewhere
         fdfac = 1.0d0 - 0.5d0*alpha*beta_fd &
                         * (1.0d0 + 1.0d0/3.0d0 * (1.0d0 - alpha)*beta_fd)
-      end where
-
-      where (fdfac < smalldouble)
-        fdfac = 0.0d0
-      elsewhere (fdfac > 5.0d0)
-        fdfac = 1.0d0
-      end where
+      endwhere
     endif
 
     ! Fill up the empty finite disk correction array variable
