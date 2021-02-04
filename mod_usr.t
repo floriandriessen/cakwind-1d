@@ -346,11 +346,11 @@ contains
     real(8), intent(inout) :: w(ixI^S,1:nw)
 
     ! Local variables
-    real(8) :: dvdr_up(ixI^S), dvdr_down(ixI^S), dvdr_cent(ixI^S), dvdr(ixI^S)
-    real(8) :: gcak(ixI^S), geff(ixI^S)
+    real(8) :: dvdr_up(ixO^S), dvdr_down(ixO^S), dvdr_cent(ixO^S), dvdr(ixO^S)
+    real(8) :: gcak(ixO^S), geff(ixO^S)
     real(8) :: vr(ixI^S), rho(ixI^S)
-    real(8) :: beta_fd(ixI^S), fdfac(ixI^S), timedum(ixO^S)
-    real(8) :: taum(ixI^S), taumfac(ixI^S)
+    real(8) :: beta_fd(ixO^S), fdfac(ixO^S), timedum(ixO^S)
+    real(8) :: taum(ixO^S), taumfac(ixO^S)
     real(8) :: fac, fac1, fac2
     integer :: jx^L, hx^L
 
@@ -430,7 +430,7 @@ contains
       taumfac(ixO^S) = ((1.0d0 + taum(ixO^S))**(1.0d0 - alpha) - 1.0d0) &
                           / taum(ixO^S)**(1.0d0 - alpha)
 
-      gcak(ixI^S) = gcak(ixI^S) * fdfac(ixI^S) * taumfac(ixI^S)
+      gcak(ixO^S) = gcak(ixO^S) * fdfac(ixO^S) * taumfac(ixO^S)
     else
       stop 'Error in wind option, take a valid ifrc {0,1,2}'
     endif
