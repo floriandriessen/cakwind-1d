@@ -32,6 +32,12 @@
 !   > changed CAK source computation from CGS to unitless + saved unitless to
 !     be in line with other unitless output
 !
+! (February 2021) -- Flo
+!   > implemented special outer boundary conditions as well, some kinks occured
+!     in gcak + fdfac due to abrupt change in dv/dr in outer boundary
+!     essentially the AMRVAC 'cont' takes zero gradient but constant slope
+!     extrapolation alleviates the problem
+!
 !===============================================================================
 
 module mod_usr
@@ -281,7 +287,7 @@ contains
 
   subroutine special_bound(qt,ixI^L,ixB^L,iB,w,x)
     !
-    ! Modified boundary values only at lower radial boundary (star)
+    ! Modified boundary values at inner (star) and outer radial boundary
     !
 
     ! Subroutine arguments
@@ -292,12 +298,11 @@ contains
     ! Local variable
     integer :: i
 
-    ! Convert hydro vars to primitive
-    call hd_to_primitive(ixI^L,ixI^L,w,x)
-
     select case (iB)
+    case(1)
 
-    case(1) ! Left boundary (stellar surface)
+      ! Convert hydro vars to primitive
+      call hd_to_primitive(ixI^L,ixI^L,w,x)
 
       w(ixB^S,rho_) = drhobound
 
@@ -312,23 +317,31 @@ contains
 
       enddo
 
-      !
-      ! Prohibit ghosts to be supersonic, if so put on sound speed
-      ! Also avoid overloading too much, limit to negative sound speed
-      !
+      ! Prohibit ghosts to be supersonic, also avoid overloading too much
       w(ixB^S,mom(1)) = min(w(ixB^S,mom(1)), dasound)
       w(ixB^S,mom(1)) = max(w(ixB^S,mom(1)), -dasound)
 
-    !
-    ! Right boundary is outflow, is sufficient normally to prohibit wave
-    ! feedback towards the lower boundary (set in usr.par)
-    !
+      ! Convert hydro vars back to conserved to let AMRVAC do computations
+      call hd_to_conserved(ixI^L,ixI^L,w,x)
+
+    case(2)
+      ! Constant slope extrapolation of all hydro vars
+
+      ! Convert hydro vars to primitive
+      call hd_to_primitive(ixI^L,ixI^L,w,x)
+
+      w(ixB^S,rho_) = w(ixBmin1-1,rho_) * (x(ixBmin1-1,1) / x(ixB^S,1))**2.0d0
+
+      do i = ixBmin1,ixBmax1
+        w(i,mom(1)) = w(i-1,mom(1)) + (w(ixBmin1-1,mom(1)) - w(ixBmin1-2,mom(1)))
+      enddo
+
+      ! Convert hydro vars back to conserved to let AMRVAC do computations
+      call hd_to_conserved(ixI^L,ixI^L,w,x)
+
     case default
       call mpistop("BC not specified")
     end select
-
-    ! Convert hydro vars back to conserved to let AMRVAC do computations
-    call hd_to_conserved(ixI^L,ixI^L,w,x)
 
   end subroutine special_bound
 
