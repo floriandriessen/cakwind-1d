@@ -37,6 +37,9 @@
 !     in gcak + fdfac due to abrupt change in dv/dr in outer boundary
 !     essentially the AMRVAC 'cont' takes zero gradient but constant slope
 !     extrapolation alleviates the problem
+!   > put effective gravity force in usr_gravity and removed from usr_source
+!   > determination radiation timestep (only CAK line force) now in special_dt
+!     by using gcak slot of nwextra in w-array
 !
 !===============================================================================
 
@@ -452,19 +455,39 @@ contains
     ! Fill the empty CAK array variable
     w(ixO^S,my_gcak) = gcak(ixO^S)
 
-    ! Effective gravity computation
-    !geff(ixO^S) = - dGgrav * dmstar * (1.0d0 - dgammae)/x(ixO^S,1)**2.0d0
-
     ! Update conservative vars: w = w + qdt*gsource
     w(ixO^S,mom(1)) = w(ixO^S,mom(1)) + qdt * gcak(ixO^S)*wCT(ixO^S,rho_)
 
-    ! Define a new time-step corrected for continuum and line-acceleration
-    timedum(ixO^S) = (x(jx^S,1) - x(ixO^S,1)) / gcak(ixO^S)
-    new_timestep   = 0.3d0 * minval( abs(timedum(ixO^S)) )**0.5d0
-    !if (mype==0 .and. it==50000) print*,new_timestep
-
   end subroutine CAK_source
 
+!===============================================================================
+
+  subroutine special_dt(w,ixI^L,ixO^L,dtnew,dx^D,x)
+    !
+    ! After first iteration teh usr_source routine has been called, take now
+    ! also timestep from CAK line force into account
+    !
+
+    ! Subroutine arguments
+    integer, intent(in)    :: ixI^L, ixO^L
+    real(8), intent(in)    :: dx^D, x(ixI^S,1:ndim)
+    real(8), intent(in)    :: w(ixI^S,1:nw)
+    real(8), intent(inout) :: dtnew
+
+    ! Local variables
+    real(8) :: tdum(ixO^S), dt_cak
+
+    ! Get dt from line force that is saved in the w-array in nwextra slot
+    tdum(ixO^S) = dsqrt( block%dx(ixO^S,1) / dabs(w(ixO^S,my_gcak)) )
+    dt_cak      = courantpar * minval(tdum(ixO^S))
+
+    if (it >= 1) then
+      dtnew = min(dtnew,dt_cak)
+    endif
+
+  end subroutine special_dt
+
+!===============================================================================
 
   subroutine effective_gravity(ixI^L,ixO^L,wCT,x,gravity_field)
     !
@@ -484,25 +507,6 @@ contains
     gravity_field(ixO^S,1) = -dGgrav*dmstar * (1.0d0-dgammae)/x(ixO^S,1)**2.0d0
 
   end subroutine effective_gravity
-
-!===============================================================================
-
-  subroutine special_dt(w,ixI^L,ixO^L,dtnew,dx^D,x)
-    !
-    ! After first iteration assign the new time-step of computation CAK force
-    !
-
-    ! Subroutine arguments
-    integer, intent(in)    :: ixI^L, ixO^L
-    real(8), intent(in)    :: dx^D, x(ixI^S,1:ndim)
-    real(8), intent(in)    :: w(ixI^S,1:nw)
-    real(8), intent(inout) :: dtnew
-
-    if (it >= 1) then
-      dtnew = new_timestep
-    endif
-
-  end subroutine special_dt
 
 !===============================================================================
 
