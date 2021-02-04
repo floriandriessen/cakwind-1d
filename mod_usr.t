@@ -275,9 +275,6 @@ contains
     ! Convert hydro vars to conserved to let AMRVAC do computations
     call hd_to_conserved(ixI^L,ixO^L,w,x)
 
-    w(ixO^S,my_gcak) = 0.0d0 ! CAK line-force
-    w(ixO^S,my_fdf)  = 0.0d0 ! Finite disk factor
-
   end subroutine initial_conditions
 
 !===============================================================================
