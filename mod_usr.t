@@ -86,14 +86,11 @@ contains
   !> This routine should set user methods, and activate the physics module
   subroutine usr_init()
 
-    ! Choose coordinate system: 1D spherical
     call set_coordinate_system("spherical")
-
-    ! Read in the required stellar + wind params from the usr.par file
     call usr_params_read(par_files)
 
     !
-    ! Choose independent normalization units, only 3 have to be specified:
+    ! Choose independent normalisation units, only 3 have to be specified:
     !     (length,temp,ndens) or (length,vel,ndens)
     ! Numberdensity chosen such that unit density becomes boundary density
     !
@@ -110,7 +107,6 @@ contains
     usr_source         => CAK_source
     usr_get_dt         => special_dt
 
-    ! Define user custom variables to store extra computations in output
     my_gcak = var_set_extravar("gcak", "gcak")
     my_fdf  = var_set_extravar("fdfac", "fdfac")
 
@@ -151,18 +147,17 @@ contains
     logg   = log10(Ggrav * mstar/rstar**2.0d0)
     logge  = logg + log10(1.0d0 - gammae)
     mumol  = (1.0d0 + 4.0d0*He_abundance)/(2.0d0 + 3.0d0*He_abundance)
-    asound = (twind * kB_cgs/(mumol * mp_cgs))**0.5d0
-    heff   = asound**2.0d0 / 10.d0**logge
+    asound = sqrt(twind * kB_cgs/(mumol * mp_cgs))
+    heff   = asound**2.0d0 / 10.0d0**logge
 
     ! Wind quantities in CAK theory
     Qmax   = Qmax * Qbar
-    vesc   = (2.0d0 * Ggrav * mstar * (1.0d0 - gammae)/rstar)**0.5d0
-    vinf   = vesc * (alpha/(1.0d0 - alpha))**0.5d0
+    vesc   = sqrt(2.0d0 * Ggrav * mstar * (1.0d0 - gammae)/rstar)
+    vinf   = vesc * sqrt(alpha/(1.0d0 - alpha))
     mdot   = lstar/const_c**2.0d0 * alpha/(1.0d0 - alpha) &
               * (Qbar * gammae/(1.0d0 - gammae))**((1.0d0 - alpha)/alpha)
     mdotfd = mdot/(1.0d0 + alpha)**(1.0d0/alpha)
 
-    ! Make all relevant variables dimensionless
     call make_dimless_vars()
 
     if (mype == 0) then
@@ -245,7 +240,7 @@ contains
 
   subroutine initial_conditions(ixI^L,ixO^L,w,x)
     !
-    ! Initial conditions start from beta velocity law
+    ! Initial conditions: beta velocity law and mass conservation
     !
 
     ! Subroutine arguments
@@ -260,14 +255,11 @@ contains
     sfac = 1.0d0 - 1.0d-3**(1.0d0/beta)
 
     where (x(ixI^S,1) >= drstar)
-       ! Set initial velocity field to beta law
        w(ixI^S,mom(1)) = dvinf * ( 1.0d0 - sfac * drstar / x(ixI^S,1) )**beta
 
-       ! Set initial density
        w(ixI^S,rho_) = dmdot / (4.0d0*dpi * x(ixI^S,1)**2.0d0 * w(ixI^S,mom(1)))
     endwhere
 
-    ! Convert hydro vars to conserved to let AMRVAC do computations
     call hd_to_conserved(ixI^L,ixO^L,w,x)
 
   end subroutine initial_conditions
@@ -290,7 +282,6 @@ contains
     select case (iB)
     case(1)
 
-      ! Convert hydro vars to primitive
       call hd_to_primitive(ixI^L,ixI^L,w,x)
 
       w(ixB^S,rho_) = drhobound
@@ -310,13 +301,11 @@ contains
       w(ixB^S,mom(1)) = min(w(ixB^S,mom(1)), dasound)
       w(ixB^S,mom(1)) = max(w(ixB^S,mom(1)), -dasound)
 
-      ! Convert hydro vars back to conserved to let AMRVAC do computations
       call hd_to_conserved(ixI^L,ixI^L,w,x)
 
     case(2)
       ! Constant slope extrapolation of all hydro vars
 
-      ! Convert hydro vars to primitive
       call hd_to_primitive(ixI^L,ixI^L,w,x)
 
       w(ixB^S,rho_) = w(ixBmin1-1,rho_) * (x(ixBmin1-1,1) / x(ixB^S,1))**2.0d0
@@ -325,7 +314,6 @@ contains
         w(i,mom(1)) = w(i-1,mom(1)) + (w(ixBmin1-1,mom(1)) - w(ixBmin1-2,mom(1)))
       enddo
 
-      ! Convert hydro vars back to conserved to let AMRVAC do computations
       call hd_to_conserved(ixI^L,ixI^L,w,x)
 
     case default
@@ -338,7 +326,7 @@ contains
 
   subroutine CAK_source(qdt,ixI^L,ixO^L,iw^LIM,qtC,wCT,qt,w,x)
     !
-    ! Compute the analytical CAK line-force
+    ! Compute the analytical CAK line force using Gayley's formalism
     !
 
     ! Subroutine arguments
@@ -459,7 +447,7 @@ contains
     real(8) :: tdum(ixO^S), dt_cak
 
     ! Get dt from line force that is saved in the w-array in nwextra slot
-    tdum(ixO^S) = dsqrt( block%dx(ixO^S,1) / dabs(w(ixO^S,my_gcak)) )
+    tdum(ixO^S) = sqrt( block%dx(ixO^S,1) / abs(w(ixO^S,my_gcak)) )
     dt_cak      = courantpar * minval(tdum(ixO^S))
 
     if (it >= 1) then
@@ -493,8 +481,7 @@ contains
 
   subroutine make_dimless_vars()
     !
-    ! Normalize quantities in use to unit quantities defined and computed
-    ! These quantities are actually used by AMRVAC in its computations!
+    ! Normalise relevant quantities to unit quantities to be used in the code
     !
 
     ! From the AMRVAC unit variables compute some extra relevant for us
@@ -511,7 +498,7 @@ contains
     dasound   = asound/unit_velocity
     dclight   = const_c/unit_velocity
     dvesc     = vesc/unit_velocity
-    dvinf     = dvesc * (alpha/(1.0d0 - alpha))**0.5d0
+    dvinf     = dvesc * sqrt(alpha/(1.0d0 - alpha))
     dkappae   = kappae * unit_density * unit_length
     dGgrav    = Ggrav * my_unit_ggrav
     dgammae   = dkappae * dlstar/(4.d0*dpi * dGgrav * dmstar * dclight)
