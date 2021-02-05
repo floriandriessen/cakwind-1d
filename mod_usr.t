@@ -70,8 +70,8 @@ module mod_usr
   real(8) :: dlstar, dmstar, drstar, drhobound, dtwind, dkappae, dvesc, &
              dvinf, dmdot, dasound, dclight, dGgrav, dgammae
 
-  ! log(g), eff. log(g), scale height, year (s), mean molecular weight
-  real(8) :: logg, logge, heff, year=3.15567d7, mumol
+  ! log(g), eff. log(g), scale height, mean molecular weight
+  real(8) :: logg, logge, heff, mumol
 
   ! New variables to store in conservative variables array 'w'
   integer :: my_gcak, my_fdf
@@ -149,7 +149,7 @@ contains
     ! Stellar structure
     gammae = kappae * lstar/(4.0d0*dpi * Ggrav * mstar * const_c)
     logg   = log10(Ggrav * mstar/rstar**2.0d0)
-    logge  = logg * (1.0d0 - gammae)**0.5d0
+    logge  = logg + log10(1.0d0 - gammae)
     mumol  = (1.0d0 + 4.0d0*He_abundance)/(2.0d0 + 3.0d0*He_abundance)
     asound = (twind * kB_cgs/(mumol * mp_cgs))**0.5d0
     heff   = asound**2.0d0 / 10.d0**logge
@@ -209,8 +209,8 @@ contains
       print*, '   1 : CAK + fd          '
       print*, '   2 : CAK + cut-off     '
       print*, 'surface density        = ', rhobound
-      print*, 'analytic Mdot CAK      = ', mdot * (year/msun)
-      print*, '... with FD correction = ', mdotfd * (year/msun)
+      print*, 'analytic Mdot CAK      = ', mdot * (const_years/msun)
+      print*, '... with FD correction = ', mdotfd * (const_years/msun)
       print*
       print*, '========================================'
       print*, '    Dimensionless AMRVAC quantities     '
