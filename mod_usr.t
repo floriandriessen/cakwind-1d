@@ -38,7 +38,7 @@
 !     essentially the AMRVAC 'cont' takes zero gradient but constant slope
 !     extrapolation alleviates the problem
 !   > put effective gravity force in usr_gravity and removed from usr_source
-!   > determination radiation timestep (only CAK line force) now in special_dt
+!   > determination radiation timestep (only CAK line force now) in special_dt
 !     by using gcak slot of nwextra in w-array
 !
 !===============================================================================
@@ -54,32 +54,23 @@ module mod_usr
   real(8), parameter :: msun=1.989d33, lsun=3.827d33, rsun=6.96d10, &
                         Ggrav=6.67d-8, kappae=0.34d0
 
-  ! Stellar parameters: luminosity, mass, radius, surface density, eff. temp.
-  real(8) :: lstar, mstar, rstar, rhobound, twind
-
   ! Unit quantities that are handy: gravitational constant, luminosity, mass
   real(8) :: my_unit_ggrav, my_unit_lum, my_unit_mass
 
-  !
-  ! Wind parameters: CAK alpha, Gayley Qbar + Qmax, beta power velocity law,
-  !                  Eddington gamma, escape speed, CAK + fd mass-loss rate,
-  !                  terminal wind speed, sound speed
-  real(8) :: alpha, Qbar, Qmax, beta, gammae, vesc, mdot, mdotfd, vinf, asound
+  ! Extra input parameters:
+  real(8) :: lstar, mstar, rstar, rhobound, twind, alpha, Qbar, Qmax, beta, ifrc
+
+  ! Additionally useful stellar and wind parameters:
+  !   Eddington gamma, escape speed, CAK + fd mass-loss rate, terminal wind
+  !   speed, sound speed, log(g), eff. log(g), scale height, mean mol. weight
+  real(8) :: gammae, vesc, mdot, mdotfd, vinf, asound, logg, logge, heff, mumol
 
   ! Dimensionless variables of relevant variables
   real(8) :: dlstar, dmstar, drstar, drhobound, dtwind, dkappae, dvesc, &
              dvinf, dmdot, dasound, dclight, dGgrav, dgammae
 
-  ! log(g), eff. log(g), scale height, mean molecular weight
-  real(8) :: logg, logge, heff, mumol
-
-  ! New variables to store in conservative variables array 'w'
+  ! Extra variables to store in conservative variables array 'w'
   integer :: my_gcak, my_fdf
-
-  ! Wind options
-  integer :: ifrc
-
-  character(len=8) :: todayis
 
 contains
 
@@ -104,7 +95,7 @@ contains
     usr_init_one_grid  => initial_conditions
     usr_special_bc     => special_bound
     usr_gravity        => effective_gravity
-    usr_source         => CAK_source
+    usr_source         => line_force
     usr_get_dt         => special_dt
 
     my_gcak = var_set_extravar("gcak", "gcak")
@@ -126,7 +117,7 @@ contains
        open(unitpar, file=trim(files(n)), status="old")
        read(unitpar, star_list, end=111)
        111 close(unitpar)
-    end do
+    enddo
 
     ! Scale to cgs units
     lstar = lstar * lsun
@@ -141,6 +132,7 @@ contains
     !
     ! Compute some quantities of interest (in CGS) before making unitless
     !
+    character(len=8) :: todayis
 
     ! Stellar structure
     gammae = kappae * lstar/(4.0d0*dpi * Ggrav * mstar * const_c)
@@ -304,7 +296,7 @@ contains
       call hd_to_conserved(ixI^L,ixI^L,w,x)
 
     case(2)
-      ! Constant slope extrapolation of all hydro vars
+      ! Constant slope extrapolation of all
 
       call hd_to_primitive(ixI^L,ixI^L,w,x)
 
@@ -324,7 +316,7 @@ contains
 
 !===============================================================================
 
-  subroutine CAK_source(qdt,ixI^L,ixO^L,iw^LIM,qtC,wCT,qt,w,x)
+  subroutine line_force(qdt,ixI^L,ixO^L,iw^LIM,qtC,wCT,qt,w,x)
     !
     ! Compute the analytical CAK line force using Gayley's formalism
     !
@@ -397,14 +389,14 @@ contains
       endwhere
     endif
 
-    ! Calculate CAK line-force
+    ! Calculate CAK line force
     fac1 = 1.0d0/(1.0d0 - alpha) * dkappae * dlstar*Qbar/(4.0d0*dpi * dclight)
     fac2 = 1.0d0/(dclight * Qbar * dkappae)**alpha
     fac  = fac1 * fac2
 
     gcak(ixO^S) = fac/x(ixO^S,1)**2.0d0 * (dvdr(ixO^S)/rho(ixO^S))**alpha
 
-    ! Based on wind option proceed now
+    ! Based on wind option do corrections
     if (ifrc == 0) then
       gcak(ixO^S) = gcak(ixO^S) * fdfac(ixO^S)
     elseif (ifrc == 1) then
@@ -417,7 +409,7 @@ contains
 
       gcak(ixO^S) = gcak(ixO^S) * fdfac(ixO^S) * taumfac(ixO^S)
     else
-      stop 'Error in wind option, take a valid ifrc=0,1,2'
+      call mpistop('Error in wind option, take a valid ifrc=0,1,2')
     endif
 
     ! Fill the nwextra slots for output
@@ -427,7 +419,7 @@ contains
     ! Update conservative vars: w = w + qdt*gsource
     w(ixO^S,mom(1)) = w(ixO^S,mom(1)) + qdt * gcak(ixO^S) * wCT(ixO^S,rho_)
 
-  end subroutine CAK_source
+  end subroutine line_force
 
 !===============================================================================
 

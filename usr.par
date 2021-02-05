@@ -1,8 +1,8 @@
 !=================================================
 ! Project : 1D isothermal CAK wind
 !
-! Aim     : serves to make a relaxed wind for input
-!			in other wind models 
+! Aim     : (mainly) serves to make a relaxed wind
+!           for input in other wind models
 !
 ! Config  : setup.pl -d=1
 !=================================================
