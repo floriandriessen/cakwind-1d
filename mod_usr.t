@@ -330,7 +330,7 @@ contains
     ! Local variables
     real(8) :: vr(ixI^S), rho(ixI^S)
     real(8) :: dvdr_up(ixO^S), dvdr_down(ixO^S), dvdr_cent(ixO^S), dvdr(ixO^S)
-    real(8) :: gcak(ixO^S), geff(ixO^S), beta_fd(ixO^S), fdfac(ixO^S)
+    real(8) :: gcak(ixO^S), beta_fd(ixO^S), fdfac(ixO^S)
     real(8) :: taum(ixO^S), taumfac(ixO^S)
     real(8) :: fac, fac1, fac2
     integer :: jx^L, hx^L
