@@ -51,14 +51,15 @@ module mod_usr
   implicit none
 
   ! The usual suspects
-  real(8), parameter :: msun=1.989d33, lsun=3.827d33, rsun=6.96d10, &
-                        Ggrav=6.67d-8, kappae=0.34d0
+  real(8), parameter :: msun=1.989d33, lsun=3.827d33, rsun=6.96d10
+  real(8), parameter :: Ggrav=6.67d-8, kappae=0.34d0
 
   ! Unit quantities that are handy: gravitational constant, luminosity, mass
   real(8) :: my_unit_ggrav, my_unit_lum, my_unit_mass
 
   ! Extra input parameters:
-  real(8) :: lstar, mstar, rstar, rhobound, twind, alpha, Qbar, Qmax, beta, ifrc
+  real(8) :: lstar, mstar, rstar, rhobound, twind, alpha, Qbar, Qmax, beta
+  integer :: ifrc
 
   ! Additionally useful stellar and wind parameters:
   !   Eddington gamma, escape speed, CAK + fd mass-loss rate, terminal wind
@@ -66,8 +67,8 @@ module mod_usr
   real(8) :: gammae, vesc, mdot, mdotfd, vinf, asound, logg, logge, heff, mumol
 
   ! Dimensionless variables of relevant variables
-  real(8) :: dlstar, dmstar, drstar, drhobound, dtwind, dkappae, dvesc, &
-             dvinf, dmdot, dasound, dclight, dGgrav, dgammae
+  real(8) :: dlstar, dmstar, drstar, drhobound, dtwind, dkappae, dvesc
+  real(8) :: dvinf, dmdot, dasound, dclight, dGgrav, dgammae
 
   ! Extra variables to store in conservative variables array 'w'
   integer :: my_gcak, my_fdf
