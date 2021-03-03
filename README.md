@@ -8,7 +8,7 @@ Make HD model of a CAK wind from a OB star using MPI-AMRVAC. The stellar wind is
 
 After cloning go into the local directory and fetch AMRVAC makefile (assuming you have exported the `AMRVAC_DIR` variable in the `.bashrc` on linux or `.bash_profile` on macos)
 ```
-$ setup.pl -d=2
+$ setup.pl -d=1
 ```
 and do a make (if the AMRVAC source was not compiled yet, this will be done now as well)
 ```
