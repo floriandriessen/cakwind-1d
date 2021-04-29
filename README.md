@@ -34,11 +34,11 @@ if(mod(domain_nx^D/block_nx^D,2)/=0) &
 ```
 and comment these two lines (really one line in Fortran). This allows us to run the problem on just 1 block and not multiple, i.e. a serial simulation on 1 block. In principle this user routine can run in parallel on many blocks. However, we ask for ascii file output (`.blk` files) because we generally use these CAK models as input in other wind models or multi-d applications. 
 
-At the moment the AMRVAC `oneblock` routine (in `src/amrvacio/convert.t`) that takes care of the oneblock file output is not parallelised. **Note**: for 1D LDI simulations we do so far a restart from the .dat file. This by definition also requires a oneblock option because for the restart mesh + block related information is stored in the .dat file. Therefore, the LDI .par file has to have the **exact** same mesh settings as the CAK simulation (of course also the stellar parameters...).
+At the moment the AMRVAC `oneblock` routine (in `src/amrvacio/convert.t`) that takes care of the oneblock file output is not parallelised.
 
 ### Performing a simulation
 
-Simulations can be run for a specific OB star using the .par file. The goal of the CAK simulations is to create a relaxed, steady-state wind model to be used as initial wind condition in various contexts (in this case the LDI). The current .par file has stellar parameters corresponding to a typical OSG (Zeta Puppis) in the Galaxy.
+Simulations can be run for a specific OB star using the .par file. The goal of the CAK simulations is to create a relaxed, steady-state wind model to be used as initial wind condition in various contexts. The current .par file has stellar parameters corresponding to a typical OSG (Zeta Puppis) in the Galaxy.
 
 Given that the CAK simulations are rather trivial (i.e. runtime ~few sec to few minutes on a modern laptop/desktop) there are no options included in the .par file to do restarts or resumes. Depending on the stellar parameters the runtime can be best adjusted based on the unit_time that is printed to the screen at the start of the simulation.
 
