@@ -133,7 +133,6 @@ contains
     !
     ! Compute some quantities of interest (in CGS) before making unitless
     !
-    character(len=8) :: todayis
 
     ! Stellar structure
     gammae = kappae * lstar/(4.0d0*dpi * Ggrav * mstar * const_c)
@@ -152,80 +151,6 @@ contains
     mdotfd = mdot/(1.0d0 + alpha)**(1.0d0/alpha)
 
     call make_dimless_vars()
-
-    if (mype == 0) then
-      call date_and_time(todayis)
-      print*, 'MPI-AMRVAC simulation ran on ', &
-                    todayis(7:8), '/', todayis(5:6), '/', todayis(1:4)
-      print*
-      print*, '======================'
-      print*, '   Unity quantities   '
-      print*, '======================'
-      print*, 'unit length        = ', unit_length
-      print*, 'unit density       = ', unit_density
-      print*, 'unit velocity      = ', unit_velocity
-      print*, 'unit numberdensity = ', unit_numberdensity
-      print*, 'unit pressure      = ', unit_pressure
-      print*, 'unit temperature   = ', unit_temperature
-      print*, 'unit time          = ', unit_time
-      print*
-      print*, '==============================================='
-      print*, '   Stellar and wind parameters in CGS units    '
-      print*, '==============================================='
-      print*, 'L/Lsun                 = ', lstar/lsun
-      print*, 'M/Msun                 = ', mstar/msun
-      print*, 'R/Rsun                 = ', rstar/rsun
-      print*, 'Twind                  = ', twind
-      print*, 'Mean molecular weight  = ', mumol
-      print*, 'log(g)                 = ', logg
-      print*, 'eff. log(g)            = ', logge
-      print*, 'eff. scale height heff = ', heff
-      print*, 'heff/Rstar             = ', heff/rstar
-      print*, 'Eddington gamma        = ', gammae
-      print*
-      print*, 'adiabatic gamma = ', hd_gamma
-      print*, 'alpha           = ', alpha
-      print*, 'Qbar            = ', Qbar
-      print*, 'Qmax/Qbar       = ', Qmax/Qbar
-      print*, 'beta            = ', beta
-      print*, 'asound          = ', asound
-      print*, 'eff. vesc       = ', vesc
-      print*, 'vinf            = ', vinf
-      print*
-      print*, 'wind option            = ', ifrc
-      print*, '   0 : radial stream CAK '
-      print*, '   1 : CAK + fd          '
-      print*, '   2 : CAK + cut-off     '
-      print*, 'surface density        = ', rhobound
-      print*, 'analytic Mdot CAK      = ', mdot * (const_years/msun)
-      print*, '... with FD correction = ', mdotfd * (const_years/msun)
-      print*
-      print*, '========================================'
-      print*, '    Dimensionless AMRVAC quantities     '
-      print*, '========================================'
-      print*, 'Extra computed unit quantities:'
-      print*, '   unit Lum  = ', my_unit_lum
-      print*, '   unit Mass = ', my_unit_mass
-      print*, '   unit Grav = ', my_unit_ggrav
-      print*, 'Lstar        = ', dlstar
-      print*, 'Mstar        = ', dmstar
-      print*, 'Rstar        = ', drstar
-      print*, 'Twind        = ', dtwind
-      print*, 'Edd. gamma   = ', dgammae
-      print*, 'rhobound     = ', drhobound
-      print*, 'Mdot         = ', dmdot
-      print*, 'alpha        = ', alpha
-      print*, 'Qbar         = ', Qbar
-      print*, 'Qmax         = ', Qmax/Qbar
-      print*, 'kappae       = ', dkappae
-      print*, 'beta         = ', beta
-      print*, 'asound       = ', dasound
-      print*, 'eff. vesc    = ', dvesc
-      print*, 'vinf         = ', dvinf
-      print*, 'clight       = ', dclight
-      print*, 'Ggrav        = ', dGgrav
-      print*
-    endif
 
   end subroutine initglobaldata_usr
 
@@ -476,6 +401,7 @@ contains
     !
     ! Normalise relevant quantities to unit quantities to be used in the code
     !
+    character(len=8) :: todayis
 
     ! From the AMRVAC unit variables compute some extra relevant for us
     my_unit_ggrav = unit_density * unit_time**2.0d0
@@ -495,6 +421,81 @@ contains
     dkappae   = kappae * unit_density * unit_length
     dGgrav    = Ggrav * my_unit_ggrav
     dgammae   = dkappae * dlstar/(4.d0*dpi * dGgrav * dmstar * dclight)
+
+    if (mype == 0) then
+      call date_and_time(todayis)
+      print*, 'MPI-AMRVAC simulation ran on ', &
+                    todayis(7:8), '/', todayis(5:6), '/', todayis(1:4)
+      print*
+      print*, '======================'
+      print*, '   Unity quantities   '
+      print*, '======================'
+      print*, 'unit length        = ', unit_length
+      print*, 'unit density       = ', unit_density
+      print*, 'unit velocity      = ', unit_velocity
+      print*, 'unit numberdensity = ', unit_numberdensity
+      print*, 'unit pressure      = ', unit_pressure
+      print*, 'unit temperature   = ', unit_temperature
+      print*, 'unit time          = ', unit_time
+      print*
+      print*, '==============================================='
+      print*, '   Stellar and wind parameters in CGS units    '
+      print*, '==============================================='
+      print*, 'L/Lsun                 = ', lstar/lsun
+      print*, 'M/Msun                 = ', mstar/msun
+      print*, 'R/Rsun                 = ', rstar/rsun
+      print*, 'Twind                  = ', twind
+      print*, 'Mean molecular weight  = ', mumol
+      print*, 'log(g)                 = ', logg
+      print*, 'eff. log(g)            = ', logge
+      print*, 'eff. scale height heff = ', heff
+      print*, 'heff/Rstar             = ', heff/rstar
+      print*, 'Eddington gamma        = ', gammae
+      print*
+      print*, 'adiabatic gamma = ', hd_gamma
+      print*, 'alpha           = ', alpha
+      print*, 'Qbar            = ', Qbar
+      print*, 'Qmax/Qbar       = ', Qmax/Qbar
+      print*, 'beta            = ', beta
+      print*, 'asound          = ', asound
+      print*, 'eff. vesc       = ', vesc
+      print*, 'CAK vinf        = ', vinf
+      print*, 'FD vinf         = ', 3.0d0 * vesc
+      print*
+      print*, 'wind option            = ', ifrc
+      print*, '   0 : radial stream CAK '
+      print*, '   1 : CAK + fd          '
+      print*, '   2 : CAK + cut-off     '
+      print*, 'surface density        = ', rhobound
+      print*, 'analytic Mdot CAK      = ', mdot * (const_years/msun)
+      print*, '... with FD correction = ', mdotfd * (const_years/msun)
+      print*
+      print*, '========================================'
+      print*, '    Dimensionless AMRVAC quantities     '
+      print*, '========================================'
+      print*, 'Extra computed unit quantities:'
+      print*, '   unit Lum  = ', my_unit_lum
+      print*, '   unit Mass = ', my_unit_mass
+      print*, '   unit Grav = ', my_unit_ggrav
+      print*, 'Lstar        = ', dlstar
+      print*, 'Mstar        = ', dmstar
+      print*, 'Rstar        = ', drstar
+      print*, 'Twind        = ', dtwind
+      print*, 'Edd. gamma   = ', dgammae
+      print*, 'rhobound     = ', drhobound
+      print*, 'Mdot         = ', dmdot
+      print*, 'alpha        = ', alpha
+      print*, 'Qbar         = ', Qbar
+      print*, 'Qmax         = ', Qmax/Qbar
+      print*, 'kappae       = ', dkappae
+      print*, 'beta         = ', beta
+      print*, 'asound       = ', dasound
+      print*, 'eff. vesc    = ', dvesc
+      print*, 'vinf         = ', dvinf
+      print*, 'clight       = ', dclight
+      print*, 'Ggrav        = ', dGgrav
+      print*
+    endif
 
   end subroutine make_dimless_vars
 
