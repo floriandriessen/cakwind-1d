@@ -75,7 +75,9 @@ module mod_usr
 
 contains
 
-  !> This routine should set user methods, and activate the physics module
+  !======================================================================
+  ! This routine should set user methods, and activate the physics module
+  !======================================================================
   subroutine usr_init()
 
     call set_coordinate_system("spherical")
@@ -104,8 +106,9 @@ contains
 
   end subroutine usr_init
 
-!===============================================================================
-
+  !========================================================
+  ! Read in the usr.par file with the problem specific list
+  !========================================================
   subroutine usr_params_read(files)
 
     character(len=*), intent(in) :: files(:)
@@ -127,12 +130,10 @@ contains
 
   end subroutine usr_params_read
 
-!===============================================================================
-
+  !====================================================================
+  ! Compute some quantities of interest (in CGS) before making unitless
+  !====================================================================
   subroutine initglobaldata_usr
-    !
-    ! Compute some quantities of interest (in CGS) before making unitless
-    !
 
     ! Stellar structure
     gammae = kappae * lstar/(4.0d0*dpi * Ggrav * mstar * const_c)
@@ -154,12 +155,10 @@ contains
 
   end subroutine initglobaldata_usr
 
-!===============================================================================
-
+  !==========================================================================
+  ! Initial conditions start from spherical 1d beta law and mass conservation
+  !==========================================================================
   subroutine initial_conditions(ixI^L,ixO^L,w,x)
-    !
-    ! Initial conditions: beta velocity law and mass conservation
-    !
 
     ! Subroutine arguments
     integer, intent(in)    :: ixI^L, ixO^L
@@ -182,12 +181,10 @@ contains
 
   end subroutine initial_conditions
 
-!===============================================================================
-
+  !==================================================================
+  ! Special user boundary conditions at inner + outer radial boundary
+  !==================================================================
   subroutine special_bound(qt,ixI^L,ixB^L,iB,w,x)
-    !
-    ! Modified boundary values at inner (star) and outer radial boundary
-    !
 
     ! Subroutine arguments
     integer, intent(in)    :: ixI^L, ixB^L, iB
@@ -212,7 +209,6 @@ contains
         else
           w(i,mom(1)) = w(i+1,mom(1))
         endif
-
       enddo
 
       ! Prohibit ghosts to be supersonic, also avoid overloading too much
@@ -222,7 +218,7 @@ contains
       call hd_to_conserved(ixI^L,ixI^L,w,x)
 
     case(2)
-      ! Constant slope extrapolation of all
+      ! Constant extrapolation of all
 
       call hd_to_primitive(ixI^L,ixI^L,w,x)
 
@@ -240,12 +236,10 @@ contains
 
   end subroutine special_bound
 
-!===============================================================================
-
+  !=======================================================================
+  ! Extra source using the analytical CAK line force in Gayley's formalism
+  !=======================================================================
   subroutine line_force(qdt,ixI^L,ixO^L,iw^LIM,qtC,wCT,qt,w,x)
-    !
-    ! Compute the analytical CAK line force using Gayley's formalism
-    !
 
     ! Subroutine arguments
     integer, intent(in)    :: ixI^L, ixO^L, iw^LIM
@@ -261,20 +255,11 @@ contains
     real(8) :: fac, fac1, fac2
     integer :: jx^L, hx^L
 
-    !========================================================================
-    ! Convert to primitives
-
-    ! Define the time-centred, local velocity from the local momentum
-    vr(ixI^S) = wCT(ixI^S,mom(1)) / wCT(ixI^S,rho_)
-
-    ! Time-centred density
+    ! Define time-centred, radial velocity from the radial momentum and density
+    vr(ixI^S)  = wCT(ixI^S,mom(1)) / wCT(ixI^S,rho_)
     rho(ixI^S) = wCT(ixI^S,rho_)
 
-    !========================================================================
-    !
-    ! Make new indices covering whole grid by increasing +1 (j) and decreasing
-    ! by -1 (h). Special, fancy syntax that AMRVAC understands
-    !
+    ! Index +1 (j) and index -1 (h) in radial direction; kr(dir,dim)=1, dir=dim
     jx^L=ixO^L+kr(1,^D);
     hx^L=ixO^L-kr(1,^D);
 
@@ -347,13 +332,11 @@ contains
 
   end subroutine line_force
 
-!===============================================================================
-
+  !========================================================================
+  ! After first iteration the usr_source routine has been called, take now
+  ! also timestep from CAK line force into account
+  !========================================================================
   subroutine special_dt(w,ixI^L,ixO^L,dtnew,dx^D,x)
-    !
-    ! After first iteration the usr_source routine has been called, take now
-    ! also timestep from CAK line force into account
-    !
 
     ! Subroutine arguments
     integer, intent(in)    :: ixI^L, ixO^L
@@ -374,13 +357,11 @@ contains
 
   end subroutine special_dt
 
-!===============================================================================
-
+  !===================================================================
+  ! Combine stellar gravity and continuum electron scattering into an
+  ! effective gravity using Eddington's gamma
+  !===================================================================
   subroutine effective_gravity(ixI^L,ixO^L,wCT,x,gravity_field)
-    !
-    ! Combine stellar gravity and continuum electron scattering into an
-    ! effective gravity using Eddington's gamma
-    !
 
     ! Subroutine arguments
     integer, intent(in)  :: ixI^L, ixO^L
@@ -395,12 +376,12 @@ contains
 
   end subroutine effective_gravity
 
-!===============================================================================
-
+  !======================================================================
+  ! Normalise relevant quantities to be used in the code + print overview
+  !======================================================================
   subroutine make_dimless_vars()
-    !
-    ! Normalise relevant quantities to unit quantities to be used in the code
-    !
+
+    ! Local variable
     character(len=8) :: todayis
 
     ! From the AMRVAC unit variables compute some extra relevant for us
