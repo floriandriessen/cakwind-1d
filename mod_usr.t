@@ -2,43 +2,12 @@
 ! 1D CAK wind module for launching a spherically symmetric line-driven wind
 ! from the stellar surface
 !
-! Coded up by Flo for his KU Leuven PhD thesis 2018/2022 using a version of
-! Nico's routine of his KU Leuven master thesis 2017/2018
+! Coded up by Flo for his KU Leuven PhD thesis 2018/2022
 !-------------------------------------------------------------------------------
 ! Options for wind to be specified in usr.par file:
 !   ifrc = 0  : radially streaming CAK wind
 !   ifrc = 1  : finite disk corrected CAK wind
 !   ifrc = 2  : finite disk + opacity cut-off (from SO13 dN/dq distribution)
-!
-! (April 2019) -- Flo
-!   > major cleaning and deleting unnecessary defined variables
-!   > included opacity cut-off option (for LDI sims)
-!
-! (August 2019) -- Flo
-!   > fixed problems with unit conversion in original code of Nico
-!   > extensive testing + further cleaning + commenting
-!
-! (September 2019) -- Flo
-!   > last fixes in line-force computation
-!   > removed effective gravity from output (not interesting, only for testing)
-!
-! (July 2020) -- Flo
-!   > renaming of my_unit_mass/lum/ggrav in order to compile without conflict as
-!     AMRVAC v.3 has a new particle module (with protected var my_unit_mass)
-!
-! (August 2020) -- Flo
-!   > implemented exact dv/dr algorithm for non-uniform grids
-!   > changed CAK source computation from CGS to unitless + saved unitless to
-!     be in line with other unitless output
-!
-! (February 2021) -- Flo
-!   > implemented special outer boundary conditions, some kinks occured in gcak
-!     + fdfac due to abrupt change in dv/dr in outer boundary
-!     essentially the AMRVAC 'cont' takes zero gradient but constant slope
-!     extrapolation alleviates the problem
-!   > put effective gravity force in usr_gravity and removed from usr_source
-!   > determination radiation timestep (only CAK line force now) in special_dt
-!     by using gcak slot of nwextra in w-array
 !===============================================================================
 
 module mod_usr
