@@ -52,19 +52,20 @@ module mod_usr
 
   ! The usual suspects
   real(8), parameter :: msun=1.989d33, lsun=3.827d33, rsun=6.96d10
-  real(8), parameter :: Ggrav=6.67d-8, kappae=0.34d0
+  real(8), parameter :: Ggrav=6.67d-8, kappae=0.34d0, sigmaSB=5.67e-5
 
   ! Unit quantities that are handy: gravitational constant, luminosity, mass
   real(8) :: my_unit_ggrav, my_unit_lum, my_unit_mass
 
   ! Extra input parameters:
-  real(8) :: lstar, mstar, rstar, rhobound, twind, alpha, Qbar, Qmax, beta
+  real(8) :: mstar, rstar, rhobound, twind, alpha, Qbar, Qmax, beta
   integer :: ifrc
 
   ! Additionally useful stellar and wind parameters:
-  !   Eddington gamma, escape speed, CAK + fd mass-loss rate, terminal wind
-  !   speed, sound speed, log(g), eff. log(g), scale height, mean mol. weight
-  real(8) :: gammae, vesc, mdot, mdotfd, vinf, asound, logg, logge, heff, mumol
+  !   luminosity, Eddington gamma, escape speed, CAK + fd mass-loss rate,
+  !   terminal wind + sound speed, log(g), eff. log(g), scale height, mean mol. weight
+  real(8) :: lstar, gammae, vesc, mdot, mdotfd, vinf, asound, logg, logge
+  real(8) :: heff, mumol
 
   ! Dimensionless variables of relevant variables
   real(8) :: dlstar, dmstar, drstar, drhobound, dtwind, dkappae, dvesc
@@ -114,8 +115,8 @@ contains
     character(len=*), intent(in) :: files(:)
     integer :: n
 
-    namelist /star_list/ mstar, lstar, rstar, twind, rhobound, alpha, &
-                          Qbar, Qmax, beta, ifrc
+    namelist /star_list/ mstar, rstar, twind, rhobound, alpha, Qbar, Qmax, &
+                         beta, ifrc
 
     do n = 1,size(files)
        open(unitpar, file=trim(files(n)), status="old")
@@ -124,7 +125,6 @@ contains
     enddo
 
     ! Scale to cgs units
-    lstar = lstar * lsun
     mstar = mstar * msun
     rstar = rstar * rsun
 
@@ -136,6 +136,7 @@ contains
   subroutine initglobaldata_usr
 
     ! Stellar structure
+    lstar  = 4.0d0*dpi * rstar**2.0d0 * sigmaSB * twind**4.0d0
     gammae = kappae * lstar/(4.0d0*dpi * Ggrav * mstar * const_c)
     logg   = log10(Ggrav * mstar/rstar**2.0d0)
     logge  = logg + log10(1.0d0 - gammae)

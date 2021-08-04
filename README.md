@@ -50,7 +50,6 @@ Additionally, a `star_list` is specified in the .par file containing variables s
 
 | Parameter| Explanation                                                       |
 |----------|-------------------------------------------------------------------|
-| lstar    | stellar luminosity (solar units)                                  |
 | mstar    | stellar mass (solar units)                                        |
 | rstar    | stellar radius (solar units)                                      |
 | twind    | wind temperature (Kelvin)                                         |                                                      | rhobound | boundary density (g/cm^3)                                         |

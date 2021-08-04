@@ -58,7 +58,6 @@
 /
 
 &star_list
-  lstar    = 8.0d5
   mstar    = 50.0d0
   rstar    = 20.0d0
   twind    = 4.0d4
