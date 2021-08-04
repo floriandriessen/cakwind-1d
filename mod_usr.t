@@ -8,7 +8,7 @@
 ! Options for wind to be specified in usr.par file:
 !   ifrc = 0  : radially streaming CAK wind
 !   ifrc = 1  : finite disk corrected CAK wind
-!   ifrc = 2  : finite disk + opacity cut-off
+!   ifrc = 2  : finite disk + opacity cut-off (from SO13 dN/dq distribution)
 !
 ! (April 2019) -- Flo
 !   > major cleaning and deleting unnecessary defined variables
@@ -27,20 +27,18 @@
 !     AMRVAC v.3 has a new particle module (with protected var my_unit_mass)
 !
 ! (August 2020) -- Flo
-!   > implemented exact dv/dr algorithm for non-uniform grids + some minor
-!     performance improvements
+!   > implemented exact dv/dr algorithm for non-uniform grids
 !   > changed CAK source computation from CGS to unitless + saved unitless to
 !     be in line with other unitless output
 !
 ! (February 2021) -- Flo
-!   > implemented special outer boundary conditions as well, some kinks occured
-!     in gcak + fdfac due to abrupt change in dv/dr in outer boundary
+!   > implemented special outer boundary conditions, some kinks occured in gcak
+!     + fdfac due to abrupt change in dv/dr in outer boundary
 !     essentially the AMRVAC 'cont' takes zero gradient but constant slope
 !     extrapolation alleviates the problem
 !   > put effective gravity force in usr_gravity and removed from usr_source
 !   > determination radiation timestep (only CAK line force now) in special_dt
 !     by using gcak slot of nwextra in w-array
-!
 !===============================================================================
 
 module mod_usr
@@ -54,18 +52,15 @@ module mod_usr
   real(8), parameter :: msun=1.989d33, lsun=3.827d33, rsun=6.96d10
   real(8), parameter :: Ggrav=6.67d-8, kappae=0.34d0, sigmaSB=5.67e-5
 
-  ! Unit quantities that are handy: gravitational constant, luminosity, mass
+  ! Unit quantities that are handy
   real(8) :: my_unit_ggrav, my_unit_lum, my_unit_mass
 
-  ! Extra input parameters:
+  ! Extra input parameters
   real(8) :: mstar, rstar, rhobound, twind, alpha, Qbar, Qmax, beta
   integer :: ifrc
 
-  ! Additionally useful stellar and wind parameters:
-  !   luminosity, Eddington gamma, escape speed, CAK + fd mass-loss rate,
-  !   terminal wind + sound speed, log(g), eff. log(g), scale height, mean mol. weight
-  real(8) :: lstar, gammae, vesc, mdot, mdotfd, vinf, asound, logg, logge
-  real(8) :: heff, mumol
+  ! Additionally useful stellar and wind parameters
+  real(8) :: lstar, gammae, vesc, mdot, vinf, asound, logg, logge, heff, mumol
 
   ! Dimensionless variables of relevant variables
   real(8) :: dlstar, dmstar, drstar, drhobound, dtwind, dkappae, dvesc
@@ -84,14 +79,11 @@ contains
     call set_coordinate_system("spherical")
     call usr_params_read(par_files)
 
-    !
-    ! Choose independent normalisation units, only 3 have to be specified:
-    !     (length,temp,ndens) or (length,vel,ndens)
-    ! Numberdensity chosen such that unit density becomes boundary density
-    !
+    ! Choose normalisation units: (length,temp,ndens) or (length,vel,ndens)
+    ! numberdensity chosen such that unit density becomes boundary density
     unit_length        = rstar                                        ! cm
     unit_temperature   = twind                                        ! K
-    unit_numberdensity = rhobound/((1.0d0+4.0d0*He_abundance)*mp_cgs) ! g cm^-3
+    unit_numberdensity = rhobound/((1.0d0+4.0d0*He_abundance)*mp_cgs) ! cm^-3
 
     call HD_activate()
 
@@ -150,7 +142,6 @@ contains
     vinf   = vesc * sqrt(alpha/(1.0d0 - alpha))
     mdot   = lstar/const_c**2.0d0 * alpha/(1.0d0 - alpha) &
               * (Qbar * gammae/(1.0d0 - gammae))**((1.0d0 - alpha)/alpha)
-    mdotfd = mdot/(1.0d0 + alpha)**(1.0d0/alpha)
 
     call make_dimless_vars()
 
@@ -450,7 +441,7 @@ contains
       print*, '   2 : CAK + cut-off     '
       print*, 'surface density        = ', rhobound
       print*, 'analytic Mdot CAK      = ', mdot * (const_years/msun)
-      print*, '... with FD correction = ', mdotfd * (const_years/msun)
+      print*, '... with FD correction = ', mdot/(1.0d0 + alpha)**(1.0d0/alpha) * (const_years/msun)
       print*
       print*, '========================================'
       print*, '    Dimensionless AMRVAC quantities     '
