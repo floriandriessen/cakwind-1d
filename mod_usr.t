@@ -48,13 +48,10 @@ contains
     call set_coordinate_system("spherical")
     call usr_params_read(par_files)
 
-    ! Choose normalisation units: (length,temp,ndens) or (length,vel,ndens)
-    ! numberdensity chosen such that unit density becomes boundary density
-    unit_length        = rstar                                        ! cm
-    unit_temperature   = twind                                        ! K
-    unit_numberdensity = rhobound/((1.0d0+4.0d0*He_abundance)*mp_cgs) ! cm^-3
-
-    call HD_activate()
+    ! Choose normalisation units:
+    unit_length      = rstar    ! cm
+    unit_temperature = twind    ! K
+    unit_density     = rhobound ! g cm^-3
 
     usr_set_parameters => initglobaldata_usr
     usr_init_one_grid  => initial_conditions
@@ -62,6 +59,8 @@ contains
     usr_gravity        => effective_gravity
     usr_source         => line_force
     usr_get_dt         => special_dt
+
+    call HD_activate()
 
     my_gcak = var_set_extravar("gcak", "gcak")
     my_fdf  = var_set_extravar("fdfac", "fdfac")
