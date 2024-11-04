@@ -37,13 +37,13 @@
 /
 
 &star_list
-  mstar    = 50.0d0
-  rstar    = 20.0d0
-  twind    = 4.0d4
-  rhobound = 1.2d-11
-  alpha    = 0.65d0
-  Qbar     = 2000.0d0
-  Qmax     = 0.00395d0
-  beta     = 0.8d0
-  ifrc     = 1
+  mstar_sol   = 50.0d0
+  rstar_sol   = 20.0d0
+  twind_cgs   = 4.0d4
+  rhosurf_cgs = 1.2d-11
+  alpha       = 0.65d0
+  Qbar        = 2000.0d0
+  Qmax        = 0.00395d0
+  beta        = 0.8d0
+  ifrc        = 1
 /
