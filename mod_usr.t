@@ -7,7 +7,7 @@
 ! Options for wind to be specified in usr.par file:
 !   ifrc = 0  : radially streaming CAK wind
 !   ifrc = 1  : finite disk corrected CAK wind
-!   ifrc = 2  : finite disk + opacity cut-off (Sundqvist & Owocki 2013, dN/dq)
+!   ifrc = 2  : finite disk + opacity cut-off
 !==============================================================================
 module mod_usr
 
@@ -18,17 +18,17 @@ module mod_usr
   ! Extra input parameters
   integer :: ifrc
   real(8) :: mstar_sol, rstar_sol, twind_cgs, rhosurf_cgs
-  real(8) :: alpha, Qbar, Qmax, beta
+  real(8) :: cak_alpha, gayley_qbar, gayley_q0, beta
 
   ! Dimensionless variables of relevant variables
-  real(8) :: lstar, mstar, rstar, rhosurf, twind, kappae, vinf, mdot, gammae
+  real(8) :: lstar, mstar, rstar, rhosurf, twind, kappae, vinf, mdot
   real(8) :: csound, clight, gmstar
 
   ! 1-D CAK line force option from ifrc
   integer, parameter :: radstream=0, fdisc=1, fdisc_cutoff=2
 
   ! Extra variables to store in conservative variables array 'w'
-  integer :: igcak_, ifdfac_
+  integer :: ige_, igcak_, ifdfac_, ialpha_, iqbar_, iq0_, ike_
 
 contains
 
@@ -47,15 +47,20 @@ contains
     usr_set_parameters => initglobaldata_usr
     usr_init_one_grid  => initial_conditions
     usr_special_bc     => special_bound
-    usr_gravity        => effective_gravity
+    usr_gravity        => stellar_gravity
     usr_source         => line_force
     usr_get_dt         => special_dt
 
     call set_coordinate_system("spherical")
     call hd_activate()
 
+    ige_    = var_set_extravar("gelectron", "gelectron")
     igcak_  = var_set_extravar("gcak", "gcak")
     ifdfac_ = var_set_extravar("fdfac", "fdfac")
+    ialpha_ = var_set_extravar("alpha", "alpha")
+    iqbar_  = var_set_extravar("Qbar", "Qbar")
+    iq0_    = var_set_extravar("Q0", "Q0")
+    ike_    = var_set_extravar("kappae", "kappae")
 
   end subroutine usr_init
 
@@ -69,7 +74,7 @@ contains
     !--------------------------------------------------------------------------
 
     namelist /star_list/ mstar_sol, rstar_sol, twind_cgs, rhosurf_cgs, &
-         alpha, Qbar, Qmax, beta, ifrc
+         cak_alpha, gayley_qbar, gayley_q0, beta, ifrc
 
     do n = 1,size(files)
        open(unitpar, file=trim(files(n)), status="old")
@@ -85,10 +90,12 @@ contains
   !============================================================================
   subroutine initglobaldata_usr
 
+    use mod_cak_opacity, only: init_cak_table
+
     ! Local variables
     character(len=8) :: todayis
     real(8) :: unit_ggrav, unit_lum, unit_mass
-    real(8) :: lstar_cgs, mstar_cgs, rstar_cgs, gammae_cgs, vesc_cgs, mdot_cgs
+    real(8) :: lstar_cgs, mstar_cgs, rstar_cgs, gammae, vesc_cgs, mdot_cgs
     real(8) :: vinf_cgs, csound_cgs, logg_cgs, logge_cgs, heff_cgs, mumol, vesc
     !--------------------------------------------------------------------------
 
@@ -97,21 +104,25 @@ contains
 
     ! Stellar structure
     lstar_cgs  = 4.0d0*dpi * rstar_cgs**2.0d0 * const_sigma * twind_cgs**4.0d0
-    gammae_cgs = const_kappae &
-         * lstar_cgs / (4.0d0*dpi * const_G * mstar_cgs * const_c)
+    gammae     = const_kappae * lstar_cgs &
+         / (4.0d0*dpi * const_G * mstar_cgs * const_c)
     logg_cgs   = log10(const_G * mstar_cgs / rstar_cgs**2.0d0)
-    logge_cgs  = logg_cgs + log10(1.0d0 - gammae_cgs)
+    logge_cgs  = logg_cgs + log10(1.0d0 - gammae)
     mumol      = (1.0d0 + 4.0d0*He_abundance) / (2.0d0 + 3.0d0*He_abundance)
     csound_cgs = sqrt(twind_cgs * kB_cgs / (mumol * mp_cgs))
     heff_cgs   = csound_cgs**2.0d0 / 10.0d0**logge_cgs
 
     ! Wind quantities in CAK theory
-    Qmax     = Qmax * Qbar
-    vesc_cgs = sqrt( 2.0d0 * const_G * mstar_cgs * (1.0d0 - gammae_cgs) &
+    gayley_q0 = gayley_q0 * gayley_qbar
+    vesc_cgs  = sqrt( 2.0d0 * const_G * mstar_cgs * (1.0d0 - gammae) &
          / rstar_cgs )
-    vinf_cgs = vesc_cgs * sqrt(alpha / (1.0d0 - alpha))
-    mdot_cgs = lstar_cgs / const_c**2.0d0 * alpha/(1.0d0 - alpha) &
-         * (Qbar * gammae_cgs / (1.0d0 - gammae_cgs))**((1.0d0 - alpha)/alpha)
+    vinf_cgs  = vesc_cgs * sqrt(cak_alpha / (1.0d0 - cak_alpha))
+    mdot_cgs  = lstar_cgs / const_c**2.0d0 * cak_alpha / (1.0d0 - cak_alpha) &
+         * (gayley_qbar * gammae / (1.0d0 - gammae))**( (1.0d0 - cak_alpha) &
+         / cak_alpha )
+
+    ! Initialise CAK tables
+    call init_cak_table("Y02400")
 
     ! Code units
     unit_ggrav = unit_density * unit_time**2.0d0
@@ -127,10 +138,9 @@ contains
     csound  = csound_cgs / unit_velocity
     clight  = const_c / unit_velocity
     vesc    = vesc_cgs / unit_velocity
-    vinf    = vesc * sqrt(alpha / (1.0d0 - alpha))
+    vinf    = vesc * sqrt(cak_alpha / (1.0d0 - cak_alpha))
     kappae  = const_kappae * unit_density * unit_length
     gmstar  = const_G * unit_ggrav * mstar
-    gammae  = kappae * lstar / (4.d0*dpi * gmstar * clight)
 
     if (mype == 0 .and. .not.convert) then
       call date_and_time(todayis)
@@ -160,12 +170,12 @@ contains
       print*, 'eff. log(g)            = ', logge_cgs
       print*, 'eff. scale height heff = ', heff_cgs
       print*, 'heff/Rstar             = ', heff_cgs / rstar_cgs
-      print*, 'Eddington gamma        = ', gammae_cgs
+      print*, 'Eddington gamma        = ', gammae
       print*
       print*, 'adiabatic gamma = ', hd_gamma
-      print*, 'alpha           = ', alpha
-      print*, 'Qbar            = ', Qbar
-      print*, 'Qmax/Qbar       = ', Qmax/Qbar
+      print*, 'alpha           = ', cak_alpha
+      print*, 'Qbar            = ', gayley_qbar
+      print*, 'Q0/Qbar         = ', gayley_q0 / gayley_qbar
       print*, 'beta            = ', beta
       print*, 'asound          = ', csound_cgs
       print*, 'eff. vesc       = ', vesc_cgs
@@ -179,7 +189,8 @@ contains
       print*, 'surface density        = ', rhosurf_cgs
       print*, 'analytic Mdot CAK      = ', mdot_cgs * const_years / const_MSun
       print*, '... with FD correction = ', &
-           mdot_cgs / (1.0d0 + alpha)**(1.0d0/alpha) * const_years / const_MSun
+           mdot_cgs / (1.0d0 + cak_alpha)**(1.0d0/cak_alpha) &
+           * const_years / const_MSun
       print*
       print*, '========================================'
       print*, '    Dimensionless AMRVAC quantities     '
@@ -192,12 +203,8 @@ contains
       print*, 'Mstar        = ', mstar
       print*, 'Rstar        = ', rstar
       print*, 'Twind        = ', twind
-      print*, 'Edd. gamma   = ', gammae
       print*, 'rhosurface   = ', rhosurf
       print*, 'Mdot         = ', mdot
-      print*, 'alpha        = ', alpha
-      print*, 'Qbar         = ', Qbar
-      print*, 'Qmax         = ', Qmax/Qbar
       print*, 'kappae       = ', kappae
       print*, 'csound       = ', csound
       print*, 'eff. vesc    = ', vesc
@@ -233,6 +240,12 @@ contains
     endwhere
 
     call hd_to_conserved(ixI^L, ixO^L, w, x)
+
+    ! Constant line-statistic parameters at start
+    w(ixO^S,ialpha_) = cak_alpha
+    w(ixO^S,iqbar_)  = gayley_qbar
+    w(ixO^S,iq0_)    = gayley_q0
+    w(ixO^S,ike_)    = kappae
 
   end subroutine initial_conditions
 
@@ -298,6 +311,8 @@ contains
   !============================================================================
   subroutine line_force(qdt, ixI^L, ixO^L, iw^LIM, qtC, wCT, qt, w, x)
 
+    use mod_cak_opacity, only: set_cak_opacity
+
     ! Subroutine arguments
     integer, intent(in)    :: ixI^L, ixO^L, iw^LIM
     real(8), intent(in)    :: qdt, qtC, qt
@@ -305,11 +320,12 @@ contains
     real(8), intent(inout) :: w(ixI^S,1:nw)
 
     ! Local variables
-    integer :: jx^L, hx^L
+    integer :: i, jx^L, hx^L
     real(8) :: vr(ixI^S), rho(ixI^S)
     real(8) :: dvdr_up(ixO^S), dvdr_down(ixO^S), dvdr_cent(ixO^S), dvdr(ixO^S)
     real(8) :: ge(ixO^S), gcak(ixO^S), beta_fd(ixO^S), fdfac(ixO^S), &
          tausob(ixO^S)
+    real(8) :: qbar(ixO^S), q0(ixO^S), alpha(ixO^S), kappae(ixO^S)
     !--------------------------------------------------------------------------
 
     ! Define time-centred, radial velocity from the radial momentum and density
@@ -336,6 +352,15 @@ contains
     ! Total gradient (in CAK this has to be >0, otherwise stagnant flow)
     dvdr(ixO^S) = abs(dvdr_down(ixO^S) + dvdr_cent(ixO^S) + dvdr_up(ixO^S))
 
+    ! Retrieve line-statistic parameters from local density and temperature
+    do i = ixOmin1, ixOmax1
+      call set_cak_opacity(rho(i) * unit_density, twind * unit_temperature, &
+           alpha(i), qbar(i), q0(i), kappae(i))
+    enddo
+
+    ! Make table kappae unitless
+    kappae(ixO^S) = kappae(ixO^S) * unit_density * unit_length
+
     ! Finite disk factor parameterisation (Owocki & Puls 1996)
     beta_fd(ixO^S) = (1.0d0 - vr(ixO^S) / (x(ixO^S,1) * dvdr(ixO^S))) &
          * (rstar / x(ixO^S,1))**2.0d0
@@ -347,32 +372,37 @@ contains
 
     case(fdisc, fdisc_cutoff)
       where (beta_fd(ixO^S) >= 1.0d0)
-        fdfac(ixO^S) = 1.0d0 / (1.0d0 + alpha)
+        fdfac(ixO^S) = 1.0d0 / (1.0d0 + alpha(ixO^S))
       elsewhere (beta_fd(ixO^S) < -1.0d10)
-        fdfac(ixO^S) = abs(beta_fd(ixO^S))**alpha / (1.0d0 + alpha)
+        fdfac(ixO^S) = abs(beta_fd(ixO^S))**alpha(ixO^S) &
+             / (1.0d0 + alpha(ixO^S))
       elsewhere (abs(beta_fd(ixO^S)) > 1.0d-3)
-        fdfac(ixO^S) = (1.0d0 - (1.0d0 - beta_fd(ixO^S))**(1.0d0 + alpha)) &
-             / (beta_fd(ixO^S) * (1.0d0 + alpha))
+        fdfac(ixO^S) = &
+             (1.0d0 - (1.0d0 - beta_fd(ixO^S))**(1.0d0 + alpha(ixO^S))) &
+             / (beta_fd(ixO^S) * (1.0d0 + alpha(ixO^S)))
       elsewhere
-        fdfac(ixO^S) = 1.0d0 - 0.5d0*alpha * beta_fd(ixO^S) &
-             * (1.0d0 + 1.0d0/3.0d0 * (1.0d0 - alpha)*beta_fd(ixO^S))
+        fdfac(ixO^S) = 1.0d0 - 0.5d0*alpha(ixO^S) * beta_fd(ixO^S) &
+             * (1.0d0 + (1.0d0 - alpha(ixO^S))/3.0d0 * beta_fd(ixO^S))
       endwhere
     end select
 
     ! Thomson force
-    ge(ixO^S) = kappae * lstar / (4.0d0*dpi * clight * x(ixO^S,1)**2.0d0)
+    ge(ixO^S) = kappae(ixO^S) * lstar/(4.0d0*dpi * clight * x(ixO^S,1)**2.0d0)
 
     ! Sobolev optical depth for line ensemble (tau = Qbar * t_r) and CAK force
     select case (ifrc)
     case(radstream, fdisc)
-      tausob(ixO^S) = Qbar * kappae * clight * rho(ixO^S) / dvdr(ixO^S)
-      gcak(ixO^S) = Qbar/(1.0d0 - alpha) * ge(ixO^S) / tausob(ixO^S)**alpha
+      tausob(ixO^S) = qbar(ixO^S) * kappae(ixO^S) * clight * rho(ixO^S) &
+           / dvdr(ixO^S)
+      gcak(ixO^S) = qbar(ixO^S)/(1.0d0 - alpha(ixO^S)) * ge(ixO^S) &
+           / tausob(ixO^S)**alpha(ixO^S)
 
     case(fdisc_cutoff)
-      tausob(ixO^S) = Qmax * kappae * clight * rho(ixO^S) / dvdr(ixO^S)
-      gcak(ixO^S) = Qbar * ge(ixO^S) &
-           * ( (1.0d0 + tausob(ixO^S))**(1.0d0 - alpha) - 1.0d0 ) &
-           / ( (1.0d0 - alpha) * tausob(ixO^S) )
+      tausob(ixO^S) = q0(ixO^S) * kappae(ixO^S) * clight * rho(ixO^S) &
+           / dvdr(ixO^S)
+      gcak(ixO^S) = qbar(ixO^S) * ge(ixO^S) &
+           * ( (1.0d0 + tausob(ixO^S))**(1.0d0 - alpha(ixO^S)) - 1.0d0 ) &
+           / ( (1.0d0 - alpha(ixO^S)) * tausob(ixO^S) )
 
     case default
       call mpistop("Error in wind option. Take a valid ifrc=0,1,2")
@@ -381,11 +411,17 @@ contains
     gcak(ixO^S) = gcak(ixO^S) * fdfac(ixO^S)
 
     ! Fill the nwextra slots for output
+    w(ixO^S,ige_)    = ge(ixO^S)
     w(ixO^S,igcak_)  = gcak(ixO^S)
     w(ixO^S,ifdfac_) = fdfac(ixO^S)
+    w(ixO^S,ialpha_) = alpha(ixO^S)
+    w(ixO^S,iqbar_)  = qbar(ixO^S)
+    w(ixO^S,iq0_)    = q0(ixO^S)
+    w(ixO^S,ike_)    = kappae(ixO^S)
 
     ! Update conservative vars: w = w + qdt*gsource
-    w(ixO^S,mom(1)) = w(ixO^S,mom(1)) + qdt * gcak(ixO^S) * wCT(ixO^S,rho_)
+    w(ixO^S,mom(1)) = w(ixO^S,mom(1)) &
+         + qdt * (ge(ixO^S) + gcak(ixO^S)) * wCT(ixO^S,rho_)
 
   end subroutine line_force
 
@@ -401,22 +437,21 @@ contains
     real(8), intent(inout) :: dtnew
 
     ! Local variables
-    real(8) :: tdum(ixO^S), dt_cak
+    real(8) :: tmp(ixO^S), dt_cak
     !--------------------------------------------------------------------------
 
     ! Get dt from line force that is saved in the w-array in nwextra slot
-    tdum(ixO^S) = sqrt( block%dx(ixO^S,1) / abs(w(ixO^S,igcak_)) )
-    dt_cak      = courantpar * minval(tdum(ixO^S))
+    tmp(ixO^S) = sqrt(block%dx(ixO^S,1) / abs(w(ixO^S,ige_) + w(ixO^S,igcak_)))
+    dt_cak     = courantpar * minval(tmp(ixO^S))
 
     dtnew = min(dtnew, dt_cak)
 
   end subroutine special_dt
 
   !============================================================================
-  ! Combine stellar gravity and continuum electron scattering into an
-  ! effective gravity using Eddington's gamma.
+  ! Set the gravitational field of the problem.
   !============================================================================
-  subroutine effective_gravity(ixI^L, ixO^L, wCT, x, gravity_field)
+  subroutine stellar_gravity(ixI^L, ixO^L, wCT, x, gravity_field)
 
     ! Subroutine arguments
     integer, intent(in)  :: ixI^L, ixO^L
@@ -428,8 +463,8 @@ contains
     gravity_field(ixO^S,:) = 0.0d0
 
     ! Only in radial direction
-    gravity_field(ixO^S,1) = -gmstar * (1.0d0 - gammae) / x(ixO^S,1)**2.0d0
+    gravity_field(ixO^S,1) = -gmstar / x(ixO^S,1)**2.0d0
 
-  end subroutine effective_gravity
+  end subroutine stellar_gravity
 
 end module mod_usr

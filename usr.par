@@ -58,9 +58,9 @@
   rstar_sol   = 20.0d0
   twind_cgs   = 4.0d4
   rhosurf_cgs = 1.2d-11
-  alpha       = 0.65d0
-  Qbar        = 2000.0d0
-  Qmax        = 0.00395d0
+  cak_alpha   = 0.65d0
+  gayley_qbar = 2000.0d0
+  gayley_q0   = 0.00395d0
   beta        = 0.8d0
   ifrc        = 1
 /
