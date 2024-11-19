@@ -28,7 +28,7 @@ module mod_usr
   integer, parameter :: radstream=0, fdisc=1, fdisc_cutoff=2
 
   ! Extra variables to store in conservative variables array 'w'
-  integer :: ige_, igcak_, ifdfac_, ialpha_, iqbar_, iq0_, ike_
+  integer :: ige_, igcak_, ifdfac_, ialpha_, iqbar_, iq0_, ike_, ikcak_
 
 contains
 
@@ -56,11 +56,12 @@ contains
 
     ige_    = var_set_extravar("gelectron", "gelectron")
     igcak_  = var_set_extravar("gcak", "gcak")
-    ifdfac_ = var_set_extravar("fdfac", "fdfac")
+    ifdfac_ = var_set_extravar("fdfactor", "fdfactor")
     ialpha_ = var_set_extravar("alpha", "alpha")
     iqbar_  = var_set_extravar("Qbar", "Qbar")
     iq0_    = var_set_extravar("Q0", "Q0")
     ike_    = var_set_extravar("kappae", "kappae")
+    ikcak_  = var_set_extravar("kappacak", "kappacak")
 
   end subroutine usr_init
 
@@ -125,9 +126,10 @@ contains
     call init_cak_table("Y02400")
 
     ! Code units
-    unit_ggrav = unit_density * unit_time**2.0d0
-    unit_lum   = unit_density * unit_length**5.0d0 / unit_time**3.0d0
-    unit_mass  = unit_density * unit_length**3.0d0
+    unit_ggrav   = unit_density * unit_time**2.0d0
+    unit_lum     = unit_density * unit_length**5.0d0 / unit_time**3.0d0
+    unit_mass    = unit_density * unit_length**3.0d0
+    unit_opacity = unit_length**2.0d0 / unit_mass
 
     rhosurf = rhosurf_cgs / unit_density
     lstar   = lstar_cgs / unit_lum
@@ -139,7 +141,7 @@ contains
     clight  = const_c / unit_velocity
     vesc    = vesc_cgs / unit_velocity
     vinf    = vesc * sqrt(cak_alpha / (1.0d0 - cak_alpha))
-    kappae  = const_kappae * unit_density * unit_length
+    kappae  = const_kappae / unit_opacity
     gmstar  = const_G * unit_ggrav * mstar
 
     if (mype == 0 .and. .not.convert) then
@@ -196,9 +198,10 @@ contains
       print*, '    Dimensionless AMRVAC quantities     '
       print*, '========================================'
       print*, 'Extra computed unit quantities:'
-      print*, '   unit Lum  = ', unit_lum
-      print*, '   unit Mass = ', unit_mass
-      print*, '   unit Grav = ', unit_ggrav
+      print*, '   unit Lum     = ', unit_lum
+      print*, '   unit Mass    = ', unit_mass
+      print*, '   unit Grav    = ', unit_ggrav
+      print*, '   unit opacity = ', unit_opacity
       print*, 'Lstar        = ', lstar
       print*, 'Mstar        = ', mstar
       print*, 'Rstar        = ', rstar
@@ -227,7 +230,7 @@ contains
     real(8), intent(inout) :: w(ixI^S,1:nw)
 
     ! Local variables
-    real(8) :: sfac
+    real(8) :: sfac, dvdr(ixO^S), ge(ixO^S), gcak(ixO^S), tausob(ixO^S)
     !--------------------------------------------------------------------------
 
     ! Small offset (asound/vinf) to avoid starting at terminal wind speed
@@ -241,11 +244,24 @@ contains
 
     call hd_to_conserved(ixI^L, ixO^L, w, x)
 
+    ! Initial forces
+    ge(ixO^S) = kappae * lstar/(4.0d0*dpi * clight * x(ixO^S,1)**2.0d0)
+
+    dvdr(ixO^S) = beta * vinf &
+         * (1.0d0 - sfac * rstar / x(ixO^S,1))**(beta - 1.0d0) &
+         * sfac * rstar / x(ixO^S,1)**2.0d0
+    tausob(ixO^S) = gayley_qbar * kappae * clight * w(ixO^S,rho_) / dvdr(ixO^S)
+    gcak(ixO^S) = gayley_qbar / (1.0d0 - cak_alpha) * ge(ixO^S) &
+           / tausob(ixO^S)**cak_alpha
+
     ! Constant line-statistic parameters at start
+    w(ixO^S,ige_)    = ge(ixO^S)
+    w(ixO^S,igcak_)  = gcak(ixO^S)
     w(ixO^S,ialpha_) = cak_alpha
     w(ixO^S,iqbar_)  = gayley_qbar
     w(ixO^S,iq0_)    = gayley_q0
     w(ixO^S,ike_)    = kappae
+    w(ixO^S,ikcak_)  = gcak(ixO^S) * (4.0d0 * dpi * clight) / lstar
 
   end subroutine initial_conditions
 
@@ -359,7 +375,7 @@ contains
     enddo
 
     ! Make table kappae unitless
-    kappae(ixO^S) = kappae(ixO^S) * unit_density * unit_length
+    kappae(ixO^S) = kappae(ixO^S) / unit_opacity
 
     ! Finite disk factor parameterisation (Owocki & Puls 1996)
     beta_fd(ixO^S) = (1.0d0 - vr(ixO^S) / (x(ixO^S,1) * dvdr(ixO^S))) &
@@ -418,6 +434,7 @@ contains
     w(ixO^S,iqbar_)  = qbar(ixO^S)
     w(ixO^S,iq0_)    = q0(ixO^S)
     w(ixO^S,ike_)    = kappae(ixO^S)
+    w(ixO^S,ikcak_)  = gcak(ixO^S) * (4.0d0 * dpi * clight) / lstar
 
     ! Update conservative vars: w = w + qdt*gsource
     w(ixO^S,mom(1)) = w(ixO^S,mom(1)) &
