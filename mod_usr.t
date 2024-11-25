@@ -24,8 +24,13 @@ module mod_usr
   real(8) :: lstar, mstar, rstar, rhosurf, twind, kappae, vinf, mdot
   real(8) :: csound, clight, gmstar
 
+  ! Variables for adaptive surface mass density
+  logical :: use_lte_table = .false.
+  real(8) :: timedyn, gammae
+  real(8), parameter :: tfloor = 0.8d0, rho_coupling = 2.0d0
+
   ! 1-D CAK line force option from ifrc
-  integer, parameter :: radstream=0, fdisc=1, fdisc_cutoff=2
+  integer, parameter :: radstream = 0, fdisc = 1, fdisc_cutoff = 2
 
   ! Extra variables to store in conservative variables array 'w'
   integer :: ige_, igcak_, ifdfac_, ialpha_, iqbar_, iq0_, ike_, ikcak_
@@ -75,7 +80,7 @@ contains
     !--------------------------------------------------------------------------
 
     namelist /star_list/ mstar_sol, rstar_sol, twind_cgs, rhosurf_cgs, &
-         cak_alpha, gayley_qbar, gayley_q0, beta, ifrc
+         cak_alpha, gayley_qbar, gayley_q0, beta, ifrc, use_lte_table
 
     do n = 1,size(files)
        open(unitpar, file=trim(files(n)), status="old")
@@ -96,7 +101,7 @@ contains
     ! Local variables
     character(len=8) :: todayis
     real(8) :: unit_ggrav, unit_lum, unit_mass
-    real(8) :: lstar_cgs, mstar_cgs, rstar_cgs, gammae, vesc_cgs, mdot_cgs
+    real(8) :: lstar_cgs, mstar_cgs, rstar_cgs, vesc_cgs, mdot_cgs
     real(8) :: vinf_cgs, csound_cgs, logg_cgs, logge_cgs, heff_cgs, mumol, vesc
     !--------------------------------------------------------------------------
 
@@ -143,6 +148,7 @@ contains
     vinf    = vesc * sqrt(cak_alpha / (1.0d0 - cak_alpha))
     kappae  = const_kappae / unit_opacity
     gmstar  = const_G * unit_ggrav * mstar
+    timedyn = rstar / (3.0d0 * vinf)
 
     if (mype == 0 .and. .not.convert) then
       call date_and_time(todayis)
@@ -183,6 +189,7 @@ contains
       print*, 'eff. vesc       = ', vesc_cgs
       print*, 'CAK vinf        = ', vinf_cgs
       print*, 'FD vinf         = ', 3.0d0 * vesc_cgs
+      print*, 'use_lte_table   = ', use_lte_table
       print*
       print*, 'wind option            = ', ifrc
       print*, '   0 : radial stream CAK '
@@ -230,16 +237,17 @@ contains
     real(8), intent(inout) :: w(ixI^S,1:nw)
 
     ! Local variables
-    real(8) :: sfac, dvdr(ixO^S), ge(ixO^S), gcak(ixO^S), tausob(ixO^S)
+    real(8) :: sfac, dvdr(ixO^S), ge(ixO^S), gcak(ixO^S), tausob(ixO^S), vsurf
     !--------------------------------------------------------------------------
 
-    ! Small offset (asound/vinf) to avoid starting at terminal wind speed
-    sfac = 1.0d0 - 1.0d-3**(1.0d0/beta)
+    ! Fix base speed at 10km/s
+    vsurf = 10.0d0 * 1e5 / unit_velocity
+    sfac  = 1.0d0 - (vsurf / vinf)**(1.0d0/beta)
 
     where (x(ixI^S,1) >= rstar)
        w(ixI^S,mom(1)) = vinf * ( 1.0d0 - sfac * rstar / x(ixI^S,1) )**beta
-       w(ixI^S,rho_) = &
-            mdot / ( 4.0d0*dpi * x(ixI^S,1)**2.0d0 * w(ixI^S,mom(1)) )
+       w(ixI^S,rho_)   = rhosurf * vsurf / w(ixI^S,mom(1)) &
+            * (rstar / x(ixI^S,1))**2.0d0
     endwhere
 
     call hd_to_conserved(ixI^L, ixO^L, w, x)
@@ -247,11 +255,10 @@ contains
     ! Initial forces
     ge(ixO^S) = kappae * lstar/(4.0d0*dpi * clight * x(ixO^S,1)**2.0d0)
 
-    dvdr(ixO^S) = beta * vinf &
-         * (1.0d0 - sfac * rstar / x(ixO^S,1))**(beta - 1.0d0) &
-         * sfac * rstar / x(ixO^S,1)**2.0d0
+    dvdr(ixO^S)   = beta * vinf * sfac * rstar / x(ixO^S,1)**2.0d0 &
+         * (1.0d0 - sfac * rstar / x(ixO^S,1))**(beta - 1.0d0)
     tausob(ixO^S) = gayley_qbar * kappae * clight * w(ixO^S,rho_) / dvdr(ixO^S)
-    gcak(ixO^S) = gayley_qbar / (1.0d0 - cak_alpha) * ge(ixO^S) &
+    gcak(ixO^S)   = gayley_qbar / (1.0d0 - cak_alpha) * ge(ixO^S) &
            / tausob(ixO^S)**cak_alpha
 
     ! Constant line-statistic parameters at start
@@ -277,6 +284,7 @@ contains
 
     ! Local variable
     integer :: i
+    real(8) :: wlocal(ixI^S,1:nw), scaleheight, soundspeed(ixI^S)
     !--------------------------------------------------------------------------
 
     select case (iB)
@@ -284,16 +292,21 @@ contains
 
       call hd_to_primitive(ixI^L, ixI^L, w, x)
 
-      w(ixB^S,rho_) = rhosurf
+      ! Adaptive lower boundary mass density
+      wlocal(ixI^S,1:nw) = w(ixI^S,1:nw)
+      call adaptive_surface_density(ixI^L, qt, wlocal, rhosurf, soundspeed)
 
-      ! Radial velocity field (constant slope extrapolation)
+      ! Compute barometric scale height to get hydrostatic atmosphere
+      scaleheight = soundspeed(ixBmax1+1)**2.0d0 &
+          * x(ixBmax1+1,1) / (gmstar * (1.0d0 - gammae))
+
+      w(ixB^S,rho_) = rhosurf * exp( -2.0d0*x(ixBmax1+1,1) / scaleheight &
+           * (1.0d0 - 1.0d0 / x(ixB^S,1)) )
+
+      ! Radial velocity field (from continuity)
       do i = ixBmax1,ixBmin1,-1
-        if (i == ixBmax1) then
-          w(i,mom(1)) = w(i+1,mom(1)) - (w(i+2,mom(1)) - w(i+1,mom(1))) &
-               * (x(i+1,1) - x(i,1)) / (x(i+2,1) - x(i+1,1))
-        else
-          w(i,mom(1)) = w(i+1,mom(1))
-        endif
+        w(i,mom(1)) = w(i+1,mom(1)) * w(i+1,rho_) * x(i+1,1)**2.0d0 &
+             / (w(i,rho_) * x(i,1)**2.0d0)
       enddo
 
       ! Prohibit ghosts to be supersonic, also avoid overloading too much
@@ -319,6 +332,68 @@ contains
     case default
       call mpistop("BC not specified")
     end select
+
+  contains
+
+    !==========================================================================
+    ! Adaptive boundary condition for mass density at stellar surface.
+    !==========================================================================
+    subroutine adaptive_surface_density(ixI^L, qt, w, rhobound, soundspeed)
+
+      ! Subroutine arguments
+      integer, intent(in)    :: ixI^L
+      real(8), intent(in)    :: qt, w(ixI^S,1:nw)
+      real(8), intent(inout) :: rhobound
+      real(8), intent(out)   :: soundspeed(ixI^S)
+
+      ! Local variables
+      integer :: id
+      real(8) :: timecurr, timeprev
+
+      integer, save :: nupdate
+      real(8), save :: rhosurfav
+      !------------------------------------------------------------------------
+
+      ! Dimensionless isothermal sound speed
+      soundspeed(ixI^S) = sqrt(tfloor * twind)
+
+      ! Adapt after three dynamical timescales (set by finite-disk CAK model)
+      if (qt > 3.0d0 * timedyn) then
+
+        ! Get index of velocity closed to sonic velocity
+        id = minloc(abs(w(ixI^S,mom(1)) - soundspeed(ixI^S)), 1)
+
+        ! Compute average density (need to normalise/unnormalise each time)
+        timecurr  = qt - timedyn
+        timeprev  = qt - dt - timedyn
+        rhosurfav = rhosurfav * timeprev
+        rhosurfav = rhosurfav + dt * w(id,rho_)
+        rhosurfav = rhosurfav / timecurr
+
+        if (qt > nupdate * timedyn) then
+          if ( abs(rhobound/(rho_coupling * rhosurfav) - 1) >= 0.2d0) then
+            ! print*, "updated boundary density:", &
+            !      log10(rhobound * unit_density), &
+            !      " to:", log10(rho_coupling * rhosurfav * unit_density)
+            rhobound = rho_coupling * rhosurfav
+          endif
+
+          nupdate = nupdate + 5
+        endif
+
+      else
+        rhosurfav = 0.0d0
+        nupdate   = 8
+
+        if (it < 10) then
+          id = minloc(abs(w(ixI^S,mom(1)) - soundspeed(ixI^S)), 1)
+          rhobound  = rho_coupling * w(id,rho_)
+        endif
+      endif
+
+      ! if (mod(it,10000)==0) print*, 'rhobound', log10(rhobound * unit_density)
+
+    end subroutine adaptive_surface_density
 
   end subroutine special_bound
 
@@ -369,13 +444,22 @@ contains
     dvdr(ixO^S) = abs(dvdr_down(ixO^S) + dvdr_cent(ixO^S) + dvdr_up(ixO^S))
 
     ! Retrieve line-statistic parameters from local density and temperature
-    do i = ixOmin1, ixOmax1
-      call set_cak_opacity(rho(i) * unit_density, twind * unit_temperature, &
-           alpha(i), qbar(i), q0(i), kappae(i))
-    enddo
+    if (use_lte_table) then
+      do i = ixOmin1, ixOmax1
+        call set_cak_opacity(rho(i) * unit_density,       &
+             tfloor * twind * unit_temperature, alpha(i), &
+             qbar(i), q0(i), kappae(i))
+      enddo
 
-    ! Make table kappae unitless
-    kappae(ixO^S) = kappae(ixO^S) / unit_opacity
+      ! Make table kappae unitless
+      kappae(ixO^S) = kappae(ixO^S) / unit_opacity
+
+    else
+      alpha(ixO^S)  = w(ixO^S,ialpha_)
+      qbar(ixO^S)   = w(ixO^S,iqbar_)
+      q0(ixO^S)     = w(ixO^S,iq0_)
+      kappae(ixO^S) = w(ixO^S,ike_)
+    endif
 
     ! Finite disk factor parameterisation (Owocki & Puls 1996)
     beta_fd(ixO^S) = (1.0d0 - vr(ixO^S) / (x(ixO^S,1) * dvdr(ixO^S))) &

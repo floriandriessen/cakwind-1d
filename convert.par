@@ -23,7 +23,7 @@
 
 &meshlist
   domain_nx1         = 2000
-  block_nx1          = 1000
+  block_nx1          = 500
   xprobmin1          = 1.0d0 
   xprobmax1          = 10.0d0 
   stretch_dim(1)     = 'uni'

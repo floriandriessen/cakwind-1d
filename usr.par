@@ -20,7 +20,7 @@
 
 &stoplist
   dtmin    = 1.0d-20
-  time_max = 1.0d0
+  time_max = 5.0d0
 /
 
 &methodlist
@@ -36,7 +36,7 @@
 
 &meshlist
   domain_nx1         = 2000
-  block_nx1          = 1000
+  block_nx1          = 500
   xprobmin1          = 1.0d0
   xprobmax1          = 10.0d0
   stretch_dim(1)     = 'uni'
@@ -54,13 +54,14 @@
 /
 
 &star_list
-  mstar_sol   = 50.0d0
-  rstar_sol   = 20.0d0
-  twind_cgs   = 4.0d4
-  rhosurf_cgs = 1.2d-11
-  cak_alpha   = 0.65d0
-  gayley_qbar = 2000.0d0
-  gayley_q0   = 0.00395d0
-  beta        = 0.8d0
-  ifrc        = 1
+  mstar_sol     = 50.0d0
+  rstar_sol     = 20.0d0
+  twind_cgs     = 4.0d4
+  rhosurf_cgs   = 1.0d-11
+  cak_alpha     = 0.65d0
+  gayley_qbar   = 2000.0d0
+  gayley_q0     = 0.00395d0
+  beta          = 0.8d0
+  ifrc          = 1
+  use_lte_table = .true.
 /
