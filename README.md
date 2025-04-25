@@ -1,9 +1,9 @@
 
 # 1D CAK radiation-driven wind
 
-*Update 2023:* A base version of this user code is now included in MPI-AMRVAC as test problem ((see here)[https://github.com/amrvac/amrvac/tree/master/tests/hd/CAKwind_spherical_1D]). The entire line-force computation is now also part of the source code. For the latter see the documentation on the webpage.
+*Update 2023:* A base version of this user code is now included in MPI-AMRVAC as test problem ([see here](https://github.com/amrvac/amrvac/tree/master/tests/hd/CAKwind_spherical_1D)). The entire line-force computation is now also part of the source code. For the latter see the documentation on the webpage.
 
-Make HD model of a CAK wind from a OB star using MPI-AMRVAC. The stellar wind is spherically symmetric and assumed to be isothermal. The difference with the MPI-AMRVAC test problem is that here the code has been extended to follow the model of (Poniatowski et al. (2022))[https://ui.adsabs.harvard.edu/abs/2022A%26A...667A.113P/abstract]. This accounts for spatially varying line-force parameters computed from local hydrodynamic conditions as well as an update to the lower boundary condition.
+Make HD model of a CAK wind from a OB star using MPI-AMRVAC. The stellar wind is spherically symmetric and assumed to be isothermal. The difference with the MPI-AMRVAC test problem is that here the code has been extended to follow the model of [Poniatowski et al. (2022)](https://ui.adsabs.harvard.edu/abs/2022A%26A...667A.113P/abstract). This accounts for spatially varying line-force parameters computed from local hydrodynamic conditions as well as an update to the lower boundary condition.
 
 ## Setup
 
