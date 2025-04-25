@@ -1,8 +1,9 @@
 
-
 # 1D CAK radiation-driven wind
 
-Make HD model of a CAK wind from a OB star using MPI-AMRVAC. The stellar wind is spherically symmetric and assumed to be isothermal. 
+*Update 2023:* A base version of this user code is now included in MPI-AMRVAC as test problem ((see here)[https://github.com/amrvac/amrvac/tree/master/tests/hd/CAKwind_spherical_1D]). The entire line-force computation is now also part of the source code. For the latter see the documentation on the webpage.
+
+Make HD model of a CAK wind from a OB star using MPI-AMRVAC. The stellar wind is spherically symmetric and assumed to be isothermal. The difference with the MPI-AMRVAC test problem is that here the code has been extended to follow the model of (Poniatowski et al. (2022))[https://ui.adsabs.harvard.edu/abs/2022A%26A...667A.113P/abstract]. This accounts for spatially varying line-force parameters computed from local hydrodynamic conditions as well as an update to the lower boundary condition.
 
 ## Setup
 
@@ -23,24 +24,15 @@ In order to run this problem without problems we have to make some modifications
 
 The only source file required is:
 ```
-mod_input_output.t
+mod_cak_opacity.t
 ```
-living in the `<path to your amrvac>/amrvac/src/amrvacio` directory. Copy it to your local CAK directory and rename it (e.g. `my_mod_input_output.t` as in the `local.make` file is done by default).
-
-In this source file search for the following codeblock:
-```
-if(mod(domain_nx^D/block_nx^D,2)/=0) &
-  call mpistop("number level 1 blocks in D must be even")
-```
-and comment these two lines (really one line in Fortran). This allows us to run the problem on just 1 block and not multiple, i.e. a serial simulation on 1 block. In principle this user routine can run in parallel on many blocks. However, we ask for ascii file output (`.blk` files) because we generally use these CAK models as input in other wind models or multi-d applications. 
-
-At the moment the AMRVAC `oneblock` routine (in `src/amrvacio/convert.t`) that takes care of the oneblock file output is not parallelised.
+living in the `<path to your amrvac>/amrvac/src/rhd` directory. Copy it to the local CAK directory (renamining it is optional, e.g., `my_mod_cak_opacity.t`). For reasons unknown the absolute path to the tables is not found when using the module from the source directory. This has to be fixed in the future (talk to Nico).
 
 ### Performing a simulation
 
 Simulations can be run for a specific OB star using the .par file. The goal of the CAK simulations is to create a relaxed, steady-state wind model to be used as initial wind condition in various contexts. The current .par file has stellar parameters corresponding to a typical OSG (Zeta Puppis) in the Galaxy.
 
-Given that the CAK simulations are rather trivial (i.e. runtime ~few sec to few minutes on a modern laptop/desktop) there are no options included in the .par file to do restarts or resumes. Depending on the stellar parameters the runtime can be best adjusted based on the unit_time that is printed to the screen at the start of the simulation.
+Given that the CAK simulations are rather fast there are no options included in the .par file to do restarts or resumes. Depending on the stellar parameters the runtime can be best adjusted based on the unit_time that is printed to the screen at the start of the simulation.
 
 ## Additional user parameters
 
@@ -50,18 +42,20 @@ Additionally, a `star_list` is specified in the .par file containing variables s
 
 | Parameter| Explanation                                                       |
 |----------|-------------------------------------------------------------------|
-| mstar    | stellar mass (solar units)                                        |
-| rstar    | stellar radius (solar units)                                      |
-| twind    | wind temperature (Kelvin)                                         |                                                      | rhobound | boundary density (g/cm^3)                                         |
-| alpha    | CAK line-force parameter (no units)                               |
-| Qbar     | Gayley's line-force parameter (no units)                          |
-| Qmax     | OCR's cut-off parameter (no units)                                |
-| beta     | beta velocity law power index (no units)                          |
-| ifrc     | wind option                                                       |
+| mstar_sol    | stellar mass (solar units)                                    |
+| rstar_sol    | stellar radius (solar units)                                  |
+| twind_cgs    | wind temperature (Kelvin)                                     |                                                      
+| rhosurf_cgs  | boundary density (g/cm^3)                                     |
+| cak_alpha    | CAK line-force parameter (no units)                           |
+| gayley_Qbar  | Gayley's line-force parameter (no units)                      |
+| gayley_Qmax  | OCR's cut-off parameter (no units)                            |
+| beta         | beta velocity law power index (no units)                      |
+| ifrc         | wind option                                                   |
+|use_lte_table | varying line-force parameters after Poniatowksi+ (2022)       |
 
 ## Notice
 
-Tested with AMRVAC version 2.2 (Fall 2019).
+Tested with AMRVAC version 2.2 (Fall 2019), 3.0, and 3.1.
 
 ## Known issues
 
