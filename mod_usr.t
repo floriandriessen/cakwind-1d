@@ -100,7 +100,7 @@ contains
 
     ! Local variables
     character(len=8) :: todayis
-    real(8) :: unit_ggrav, unit_lum, unit_mass
+    real(8) :: unit_ggrav, unit_lum, unit_mass, unit_opacity
     real(8) :: lstar_cgs, mstar_cgs, rstar_cgs, vesc_cgs, mdot_cgs
     real(8) :: vinf_cgs, csound_cgs, logg_cgs, logge_cgs, heff_cgs, mumol, vesc
     !--------------------------------------------------------------------------
