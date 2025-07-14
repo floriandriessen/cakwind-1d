@@ -30,18 +30,15 @@ contains
     character(len=*), intent(in) :: tabledir
 
     ! Local variables
-    character(len=:), allocatable :: AMRVAC_DIR, path_table_dir
+    character(len=256) :: AMRVAC_DIR, path_table_dir
 
     call get_environment_variable("AMRVAC_DIR", AMRVAC_DIR)
-    AMRVAC_DIR = "/Users/floriand/codes/amrvac"
     path_table_dir = trim(AMRVAC_DIR)//"/src/rhd/CAK_tables/"//trim(tabledir)
 
-    !print*,'where is amrvac',AMRVAC_DIR
-    !print*,'path to tables is',path_table_dir
-    call read_table(logD_list, logT_list, alpha_vals, path_table_dir//"/al_TD")
-    call read_table(logD_list, logT_list, Qbar_vals, path_table_dir//"/Qb_TD")
-    call read_table(logD_list, logT_list, Q0_vals, path_table_dir//"/Q0_TD")
-    call read_table(logD_list, logT_list, kappae_vals, path_table_dir//"/Ke_TD")
+    call read_table(logD_list, logT_list, alpha_vals, trim(path_table_dir)//"/al_TD")
+    call read_table(logD_list, logT_list, Qbar_vals, trim(path_table_dir)//"/Qb_TD")
+    call read_table(logD_list, logT_list, Q0_vals, trim(path_table_dir)//"/Q0_TD")
+    call read_table(logD_list, logT_list, kappae_vals, trim(path_table_dir)//"/Ke_TD")
 
   end subroutine init_cak_table
 
@@ -58,10 +55,10 @@ contains
     D_input = log10(rho)
     T_input = log10(temp)
 
-    D_input = min(-7.d0-1.d-5, D_input)
-    D_input = max(-16.d0+1.d-5, D_input)
-    T_input = min(5d0-1.d-5, T_input)
-    T_input = max(4d0+1.d-5, T_input)
+    D_input = min(-5.0d0 - 1.0d-5, D_input)
+    D_input = max(-20.0d0 + 1.0d-5, D_input)
+    T_input = min(5.5d0 - 1.0d-5, T_input)
+    T_input = max(4.0d0 + 1.0d-5, T_input)
 
     call get_val_comb(alpha_vals,Qbar_vals,Q0_vals,kappae_vals, &
                       logD_list, logT_list, D_input, T_input, &
