@@ -128,7 +128,8 @@ contains
          / cak_alpha )
 
     ! Initialise CAK tables
-    call init_cak_table("Y02400")
+    if (use_lte_table) &
+         call init_cak_table("./lte-tables",set_user_tabledir=.true.)
 
     ! Code units
     unit_ggrav   = unit_density * unit_time**2.0d0

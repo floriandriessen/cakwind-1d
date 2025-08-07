@@ -9,8 +9,8 @@ module mod_cak_opacity
   implicit none
 
   !> min and max indices for R,T-range in opacity table
-  integer, parameter :: iDmin = 2, iDmax = 16
-  integer, parameter :: iTmin = 2, iTmax = 51
+  integer, parameter :: iDmin = 2, iDmax = 21
+  integer, parameter :: iTmin = 2, iTmax = 21
 
   !> The opacity tables are read once and stored globally
   double precision, public :: alpha_vals(iDmin:iDmax,iTmin:iTmax)
@@ -25,15 +25,20 @@ module mod_cak_opacity
 contains
 
   !> This routine is called when the FLD radiation module is initialised.
-  subroutine init_cak_table(tabledir)
+  subroutine init_cak_table(tabledir,set_user_tabledir)
 
     character(len=*), intent(in) :: tabledir
+    logical, optional            :: set_user_tabledir
 
     ! Local variables
     character(len=256) :: AMRVAC_DIR, path_table_dir
 
-    call get_environment_variable("AMRVAC_DIR", AMRVAC_DIR)
-    path_table_dir = trim(AMRVAC_DIR)//"/src/rhd/CAK_tables/"//trim(tabledir)
+    if (present(set_user_tabledir)) then
+      path_table_dir = trim(tabledir)
+    else
+      call get_environment_variable("AMRVAC_DIR", AMRVAC_DIR)
+      path_table_dir = trim(AMRVAC_DIR)//"/src/rhd/CAK_tables/"//trim(tabledir)
+    endif
 
     call read_table(logD_list, logT_list, alpha_vals, trim(path_table_dir)//"/al_TD")
     call read_table(logD_list, logT_list, Qbar_vals, trim(path_table_dir)//"/Qb_TD")
@@ -55,10 +60,10 @@ contains
     D_input = log10(rho)
     T_input = log10(temp)
 
-    D_input = min(-5.0d0 - 1.0d-5, D_input)
+    D_input = min(-10.0d0 - 1.0d-5, D_input)
     D_input = max(-20.0d0 + 1.0d-5, D_input)
-    T_input = min(5.5d0 - 1.0d-5, T_input)
-    T_input = max(4.0d0 + 1.0d-5, T_input)
+    T_input = min(4.7d0 - 1.0d-5, T_input)
+    T_input = max(3.7d0 + 1.0d-5, T_input)
 
     call get_val_comb(alpha_vals,Qbar_vals,Q0_vals,kappae_vals, &
                       logD_list, logT_list, D_input, T_input, &
