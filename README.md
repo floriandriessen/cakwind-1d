@@ -44,7 +44,7 @@ Additionally, a `star_list` is specified in the .par file containing variables s
 |----------|-------------------------------------------------------------------|
 | mstar_sol    | stellar mass (solar units)                                    |
 | rstar_sol    | stellar radius (solar units)                                  |
-| twind_cgs    | wind temperature (Kelvin)                                     |                                                      
+| twind_cgs    | wind temperature (Kelvin)                                     |
 | rhosurf_cgs  | boundary density (g/cm^3)                                     |
 | cak_alpha    | CAK line-force parameter (no units)                           |
 | gayley_Qbar  | Gayley's line-force parameter (no units)                      |
@@ -55,7 +55,7 @@ Additionally, a `star_list` is specified in the .par file containing variables s
 
 ## Notice
 
-Tested with AMRVAC version 2.2 (Fall 2019), 3.0, and 3.1.
+Tested with AMRVAC version 3.2, 3.1, 3.0, and 2.2.
 
 ## Known issues
 

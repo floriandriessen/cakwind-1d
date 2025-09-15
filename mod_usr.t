@@ -23,9 +23,10 @@ module mod_usr
   ! Dimensionless variables of relevant variables
   real(8) :: lstar, mstar, rstar, rhosurf, twind, kappae, vinf, mdot
   real(8) :: csound, clight, gmstar
+  logical :: use_lte_table = .false.
 
   ! Variables for adaptive surface mass density
-  logical :: use_lte_table = .false.
+  logical :: use_poniatowski_bc = .false.
   real(8) :: timedyn, gammae
   real(8), parameter :: tfloor = 0.8d0, rho_coupling = 2.0d0
 
@@ -191,6 +192,7 @@ contains
       print*, 'CAK vinf        = ', vinf_cgs
       print*, 'FD vinf         = ', 3.0d0 * vesc_cgs
       print*, 'use_lte_table   = ', use_lte_table
+      print*, 'use Luka BC     = ', use_poniatowksi_bc
       print*
       print*, 'wind option            = ', ifrc
       print*, '   0 : radial stream CAK '
@@ -284,7 +286,7 @@ contains
     real(8), intent(inout) :: w(ixI^S,1:nw)
 
     ! Local variable
-    integer :: i
+    integer :: ir
     real(8) :: wlocal(ixI^S,1:nw), scaleheight, soundspeed(ixI^S)
     !--------------------------------------------------------------------------
 
@@ -293,22 +295,33 @@ contains
 
       call hd_to_primitive(ixI^L, ixI^L, w, x)
 
-      ! Adaptive lower boundary mass density
-      wlocal(ixI^S,1:nw) = w(ixI^S,1:nw)
-      call adaptive_surface_density(ixI^L, qt, wlocal, rhosurf, soundspeed)
+      if (use_poniatowski_bc) then
+        ! Adaptive lower boundary mass density
+        wlocal(ixI^S,1:nw) = w(ixI^S,1:nw)
+        call adaptive_surface_density(ixI^L, qt, wlocal, rhosurf, soundspeed)
 
-      ! Compute barometric scale height to get hydrostatic atmosphere
-      scaleheight = soundspeed(ixBmax1+1)**2.0d0 &
-          * x(ixBmax1+1,1) / (gmstar * (1.0d0 - gammae))
+        ! Compute barometric scale height to get hydrostatic atmosphere
+        scaleheight = soundspeed(ixBmax1+1)**2.0d0 &
+            * x(ixBmax1+1,1) / (gmstar * (1.0d0 - gammae))
 
-      w(ixB^S,rho_) = rhosurf * exp( -2.0d0*x(ixBmax1+1,1) / scaleheight &
-           * (1.0d0 - 1.0d0 / x(ixB^S,1)) )
+        w(ixB^S,rho_) = rhosurf * exp( -2.0d0*x(ixBmax1+1,1) / scaleheight &
+            * (1.0d0 - 1.0d0 / x(ixB^S,1)) )
 
-      ! Radial velocity field (from continuity)
-      do i = ixBmax1,ixBmin1,-1
-        w(i,mom(1)) = w(i+1,mom(1)) * w(i+1,rho_) * x(i+1,1)**2.0d0 &
-             / (w(i,rho_) * x(i,1)**2.0d0)
-      enddo
+        ! Radial velocity field (from continuity)
+        do ir = ixBmax1,ixBmin1,-1
+          w(ir,mom(1)) = w(ir+1,mom(1)) * w(ir+1,rho_) * x(ir+1,1)**2.0d0 &
+              / (w(ir,rho_) * x(ir,1)**2.0d0)
+        enddo
+      else
+        ! Standard conditions
+        w(ixB^S,rho_) = rhosurf
+
+        ! Radial velocity field (constant slope extrapolation: d^vr/dr^2 = 0)
+        do ir = ixBmax1,ixBmin1,-1
+          w(ir^%1ixB^S,mom(1)) = 2.0d0*w(ir+1^%1ixB^S,mom(1)) &
+              - w(ir+2^%1ixB^S,mom(1))
+        enddo
+      endif
 
       ! Prohibit ghosts to be supersonic, also avoid overloading too much
       w(ixB^S,mom(1)) = min(w(ixB^S,mom(1)), csound)
@@ -323,8 +336,8 @@ contains
 
       w(ixB^S,rho_) = w(ixBmin1-1,rho_) * (x(ixBmin1-1,1) / x(ixB^S,1))**2.0d0
 
-      do i = ixBmin1,ixBmax1
-        w(i,mom(1)) = w(i-1,mom(1)) &
+      do ir = ixBmin1,ixBmax1
+        w(ir,mom(1)) = w(ir-1,mom(1)) &
              + ( w(ixBmin1-1,mom(1)) - w(ixBmin1-2,mom(1)) )
       enddo
 
