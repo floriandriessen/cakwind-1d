@@ -37,7 +37,7 @@ contains
       path_table_dir = trim(tabledir)
     else
       call get_environment_variable("AMRVAC_DIR", AMRVAC_DIR)
-      path_table_dir = trim(AMRVAC_DIR)//"/src/rhd/CAK_tables/"//trim(tabledir)
+      path_table_dir = trim(AMRVAC_DIR)//"src/tables/CAK_tables/"//trim(tabledir)
     endif
 
     call read_table(logD_list, logT_list, alpha_vals, trim(path_table_dir)//"/al_TD")
