@@ -45,11 +45,6 @@ contains
 
     call usr_params_read(par_files)
 
-    ! Choose normalisation units:
-    unit_length      = rstar_sol * const_RSun
-    unit_temperature = twind_cgs
-    unit_density     = rhosurf_cgs
-
     usr_set_parameters => initglobaldata_usr
     usr_init_one_grid  => initial_conditions
     usr_special_bc     => special_bound
@@ -101,7 +96,7 @@ contains
 
     ! Local variables
     character(len=8) :: todayis
-    real(8) :: unit_ggrav, unit_lum, unit_mass, unit_opacity
+    real(8) :: unit_ggrav, unit_lum
     real(8) :: lstar_cgs, mstar_cgs, rstar_cgs, vesc_cgs, mdot_cgs
     real(8) :: vinf_cgs, csound_cgs, logg_cgs, logge_cgs, heff_cgs, mumol, vesc
     !--------------------------------------------------------------------------
@@ -133,10 +128,18 @@ contains
          call init_cak_table("./lte-tables",set_user_tabledir=.true.)
 
     ! Code units
+    unit_length        = rstar_cgs
+    unit_temperature   = twind_cgs
+    unit_density       = rhosurf_cgs
+    unit_numberdensity = unit_density / (mumol * mp_cgs)
+    unit_pressure      = unit_numberdensity * kB_cgs * unit_temperature
+    unit_velocity      = sqrt(unit_pressure / unit_density)
+    unit_time          = unit_length / unit_velocity
+    unit_mass          = unit_density * unit_length**3.0d0
+    unit_opacity       = unit_length**2.0d0 / unit_mass
+
     unit_ggrav   = unit_density * unit_time**2.0d0
     unit_lum     = unit_density * unit_length**5.0d0 / unit_time**3.0d0
-    unit_mass    = unit_density * unit_length**3.0d0
-    unit_opacity = unit_length**2.0d0 / unit_mass
 
     rhosurf = rhosurf_cgs / unit_density
     lstar   = lstar_cgs / unit_lum
@@ -167,6 +170,8 @@ contains
       print*, 'unit pressure      = ', unit_pressure
       print*, 'unit temperature   = ', unit_temperature
       print*, 'unit time          = ', unit_time
+      print*, 'unit mass          = ', unit_mass
+      print*, 'unit opacity       = ', unit_opacity
       print*
       print*, '==============================================='
       print*, '   Stellar and wind parameters in CGS units    '
@@ -192,7 +197,7 @@ contains
       print*, 'CAK vinf        = ', vinf_cgs
       print*, 'FD vinf         = ', 3.0d0 * vesc_cgs
       print*, 'use_lte_table   = ', use_lte_table
-      print*, 'use Luka BC     = ', use_poniatowksi_bc
+      print*, 'use Luka BC     = ', use_poniatowski_bc
       print*
       print*, 'wind option            = ', ifrc
       print*, '   0 : radial stream CAK '
@@ -532,7 +537,7 @@ contains
     w(ixO^S,iqbar_)  = qbar(ixO^S)
     w(ixO^S,iq0_)    = q0(ixO^S)
     w(ixO^S,ike_)    = kappae(ixO^S)
-    w(ixO^S,ikcak_)  = gcak(ixO^S) * (4.0d0 * dpi * clight) / lstar
+    w(ixO^S,ikcak_)  = gcak(ixO^S) * (4.0d0*dpi * clight) / lstar
 
     ! Update conservative vars: w = w + qdt*gsource
     w(ixO^S,mom(1)) = w(ixO^S,mom(1)) &

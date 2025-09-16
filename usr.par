@@ -20,7 +20,7 @@
 
 &stoplist
   dtmin    = 1.0d-20
-  time_max = 5.0d0
+  time_max = 3.0d0
 /
 
 &methodlist
