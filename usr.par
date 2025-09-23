@@ -20,7 +20,7 @@
 
 &stoplist
   dtmin    = 1.0d-20
-  time_max = 3.0d0
+  time_max = 5.0d0
 /
 
 &methodlist
@@ -63,5 +63,6 @@
   gayley_q0     = 0.00395d0
   beta          = 0.8d0
   ifrc          = 1
+  tstat         = 2.0d0
   use_lte_table = .true.
 /

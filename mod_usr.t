@@ -17,7 +17,7 @@ module mod_usr
 
   ! Extra input parameters
   integer :: ifrc
-  real(8) :: mstar_sol, rstar_sol, twind_cgs, rhosurf_cgs
+  real(8) :: mstar_sol, rstar_sol, twind_cgs, rhosurf_cgs, tstat
   real(8) :: cak_alpha, gayley_qbar, gayley_q0, beta
 
   ! Dimensionless variables of relevant variables
@@ -35,6 +35,7 @@ module mod_usr
 
   ! Extra variables to store in conservative variables array 'w'
   integer :: ige_, igcak_, ifdfac_, ialpha_, iqbar_, iq0_, ike_, ikcak_
+  integer :: ialphaav_, iqbarav_, iq0av_, ikeav_
 
 contains
 
@@ -45,12 +46,13 @@ contains
 
     call usr_params_read(par_files)
 
-    usr_set_parameters => initglobaldata_usr
-    usr_init_one_grid  => initial_conditions
-    usr_special_bc     => special_bound
-    usr_gravity        => stellar_gravity
-    usr_source         => line_force
-    usr_get_dt         => special_dt
+    usr_set_parameters   => initglobaldata_usr
+    usr_init_one_grid    => initial_conditions
+    usr_special_bc       => special_bound
+    usr_gravity          => stellar_gravity
+    usr_source           => line_force
+    usr_get_dt           => special_dt
+    usr_process_adv_grid => compute_stats
 
     call set_coordinate_system("spherical")
     call hd_activate()
@@ -64,6 +66,11 @@ contains
     ike_    = var_set_extravar("kappae", "kappae")
     ikcak_  = var_set_extravar("kappacak", "kappacak")
 
+    ialphaav_ = var_set_extravar("alpha_av", "alpha_av")
+    iqbarav_  = var_set_extravar("Qbar_av", "Qbar_av")
+    iq0av_    = var_set_extravar("Q0_av", "Q0_av")
+    ikeav_    = var_set_extravar("kappae_av", "kappae_av")
+
   end subroutine usr_init
 
   !============================================================================
@@ -76,7 +83,7 @@ contains
     !--------------------------------------------------------------------------
 
     namelist /star_list/ mstar_sol, rstar_sol, twind_cgs, rhosurf_cgs, &
-         cak_alpha, gayley_qbar, gayley_q0, beta, ifrc, use_lte_table
+         cak_alpha, gayley_qbar, gayley_q0, beta, ifrc, use_lte_table, tstat
 
     do n = 1,size(files)
        open(unitpar, file=trim(files(n)), status="old")
@@ -214,9 +221,7 @@ contains
       print*, '========================================'
       print*, 'Extra computed unit quantities:'
       print*, '   unit Lum     = ', unit_lum
-      print*, '   unit Mass    = ', unit_mass
       print*, '   unit Grav    = ', unit_ggrav
-      print*, '   unit opacity = ', unit_opacity
       print*, 'Lstar        = ', lstar
       print*, 'Mstar        = ', mstar
       print*, 'Rstar        = ', rstar
@@ -586,5 +591,51 @@ contains
     gravity_field(ixO^S,1) = -gmstar / x(ixO^S,1)**2.0d0
 
   end subroutine stellar_gravity
+
+!==============================================================================
+! Routine computes the time-averaged statistical quantity <X> via:
+!   <X>_i = <X>_i-1 + dt * X_i
+! where <X> is the average of variable X and i','i-1' are the current and
+! previous timestep. NOTE: every iteration (un)normalisation has to be done.
+!==============================================================================
+  subroutine compute_stats(igrid, level, ixI^L, ixO^L, qt, w, x)
+
+    ! Subroutine arguments
+    integer,  intent(in)   :: igrid, level, ixI^L, ixO^L
+    real(8), intent(in)    :: qt, x(ixI^S,1:ndim)
+    real(8), intent(inout) :: w(ixI^S,1:nw)
+
+    ! Local variables
+    real(8) :: tnormc, tnormp
+    !--------------------------------------------------------------------------
+
+    ! Note: qt is just a placeholder for the 'global_time' variable
+    if (qt < tstat) RETURN
+
+    ! Current ^(n+1) and previous ^(n) timestep normalisation weigths
+    tnormc = qt + dt - tstat
+    tnormp = qt - tstat
+
+    ! Average CAK alpha
+    w(ixO^S,ialphaav_) = w(ixO^S,ialphaav_)*tnormp
+    w(ixO^S,ialphaav_) = w(ixO^S,ialphaav_) + dt * w(ixO^S,ialpha_)
+    w(ixO^S,ialphaav_) = w(ixO^S,ialphaav_)/tnormc
+
+    ! Average Gayley Qbar
+    w(ixO^S,iqbarav_) = w(ixO^S,iqbarav_)*tnormp
+    w(ixO^S,iqbarav_) = w(ixO^S,iqbarav_) + dt * w(ixO^S,iqbar_)
+    w(ixO^S,iqbarav_) = w(ixO^S,iqbarav_)/tnormc
+
+    ! Average Gayley Q0
+    w(ixO^S,iq0av_) = w(ixO^S,iq0av_)*tnormp
+    w(ixO^S,iq0av_) = w(ixO^S,iq0av_) + dt * w(ixO^S,iq0_)
+    w(ixO^S,iq0av_) = w(ixO^S,iq0av_)/tnormc
+
+    ! Average kappae
+    w(ixO^S,ikeav_) = w(ixO^S,ikeav_)*tnormp
+    w(ixO^S,ikeav_) = w(ixO^S,ikeav_) + dt * w(ixO^S,ike_)
+    w(ixO^S,ikeav_) = w(ixO^S,ikeav_)/tnormc
+
+  end subroutine compute_stats
 
 end module mod_usr

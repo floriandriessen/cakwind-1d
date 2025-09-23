@@ -51,6 +51,7 @@ Additionally, a `star_list` is specified in the .par file containing variables s
 | gayley_Qmax  | OCR's cut-off parameter (no units)                            |
 | beta         | beta velocity law power index (no units)                      |
 | ifrc         | wind option                                                   |
+| tstat        | start time (in units of unit time) for invoking average quantity computation |
 |use_lte_table | varying line-force parameters after Poniatowksi+ (2022)       |
 
 ## Notice
