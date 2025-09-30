@@ -6,11 +6,18 @@
 
 module mod_cak_opacity
 
+  use mod_comm_lib, only: mpistop
+
   implicit none
+  private
 
   !> min and max indices for R,T-range in opacity table
   integer, parameter :: iDmin = 2, iDmax = 21
   integer, parameter :: iTmin = 2, iTmax = 21
+
+  !> If user wants to read tables from different location than AMRVAC source
+  !> NOTE: the tables should have same size as AMRVAC tables
+  logical :: set_custom_tabledir = .false.
 
   !> The opacity tables are read once and stored globally
   double precision, public :: alpha_vals(iDmin:iDmax,iTmin:iTmax)
@@ -25,19 +32,19 @@ module mod_cak_opacity
 contains
 
   !> This routine is called when the FLD radiation module is initialised.
-  subroutine init_cak_table(tabledir,set_user_tabledir)
+  subroutine init_cak_table(tabledir,set_custom_tabledir)
 
-    character(len=*), intent(in) :: tabledir
-    logical, optional            :: set_user_tabledir
+    character(len=*),  intent(in) :: tabledir
+    logical, optional, intent(in) :: set_custom_tabledir
 
     ! Local variables
     character(len=256) :: AMRVAC_DIR, path_table_dir
 
-    if (present(set_user_tabledir)) then
+    if (present(set_custom_tabledir) .and. set_custom_tabledir) then
       path_table_dir = trim(tabledir)
     else
       call get_environment_variable("AMRVAC_DIR", AMRVAC_DIR)
-      path_table_dir = trim(AMRVAC_DIR)//"src/tables/CAK_tables/"//trim(tabledir)
+      path_table_dir = trim(AMRVAC_DIR)//"/src/tables/CAK_tables/"//trim(tabledir)
     endif
 
     call read_table(logD_list, logT_list, alpha_vals, trim(path_table_dir)//"/al_TD")
@@ -57,13 +64,11 @@ contains
     ! Local variables
     double precision :: D_input, T_input, kappa_cak
 
+    if (temp <= 0.0d0) call mpistop('Input temperature < 0 in set_cak_opacity.')
+    if (rho <= 0.0d0) call mpistop('Input density < 0 in set_cak_opacity.')
+
     D_input = log10(rho)
     T_input = log10(temp)
-
-    D_input = min(-10.0d0 - 1.0d-5, D_input)
-    D_input = max(-20.0d0 + 1.0d-5, D_input)
-    T_input = min(4.7d0 - 1.0d-5, T_input)
-    T_input = max(3.7d0 + 1.0d-5, T_input)
 
     call get_val_comb(alpha_vals,Qbar_vals,Q0_vals,kappae_vals, &
                       logD_list, logT_list, D_input, T_input, &
@@ -80,27 +85,33 @@ contains
 
     ! Local variables
     character :: dum
-    integer   :: row, col
+    integer   :: row, col, funit=99
+    logical   :: alive
 
-    open(unit=1, status='old', file=trim(filename))
+    inquire(file=trim(filename), exist=alive)
+
+    if (alive) then
+      open(funit, file=trim(filename), status='unknown')
+    else
+      call mpistop('Table file you want to use cannot be found: '//filename)
+    endif
 
     ! Read temperature
-    read(1,*) dum, T(iTmin:iTmax)
+    read(funit,*) dum, T(iTmin:iTmax)
 
     ! Read rho and kappa
     do row = iDmin,iDmax
-      read(1,*) D(row), K(row,iTmin:iTmax)
+      read(funit,*) D(row), K(row,iTmin:iTmax)
     enddo
 
-    close(1)
+    close(funit)
 
   end subroutine read_table
 
   !> This subroutine looks in the table for the four couples (T,rho) surrounding
   !> a given input T and rho
   subroutine get_val_comb(K1_vals,K2_vals,K3_vals,K4_vals, &
-                     logD_list, logT_list, D, T, &
-                     K1, K2, K3, K4)
+                     logD_list, logT_list, D, T, K1, K2, K3, K4)
 
     double precision, intent(in)  :: K1_vals(iDmin:iDmax,iTmin:iTmax)
     double precision, intent(in)  :: K2_vals(iDmin:iDmax,iTmin:iTmax)
@@ -114,27 +125,27 @@ contains
     integer :: low_D_index, up_D_index, low_T_index, up_T_index
 
     if (D .gt. maxval(logD_list)) then
-        ! print*, 'Extrapolating in logR'
-        low_D_index = iDmax-1
-        up_D_index = iDmax
+      ! print*, 'Extrapolating in logR'
+      low_D_index = iDmax-1
+      up_D_index = iDmax
     elseif (D .lt. minval(logD_list)) then
-        ! print*, 'Extrapolating in logR'
-        low_D_index = iDmin
-        up_D_index = iDmin+1
+      ! print*, 'Extrapolating in logR'
+      low_D_index = iDmin
+      up_D_index = iDmin+1
     else
-        call get_low_up_index(D, logD_list, iDmin, iDmax, low_D_index, up_D_index)
+      call get_low_up_index(D, logD_list, iDmin, iDmax, low_D_index, up_D_index)
     endif
 
     if (T .gt. maxval(logT_list)) then
-        ! print*, 'Extrapolating in logT'
-        low_T_index = iTmax-1
-        up_T_index = iTmax
+      ! print*, 'Extrapolating in logT'
+      low_T_index = iTmax-1
+      up_T_index = iTmax
     elseif (T .lt. minval(logT_list)) then
-        ! print*, 'Extrapolating in logT'
-        low_T_index = iTmin
-        up_T_index = iTmin+1
+      ! print*, 'Extrapolating in logT'
+      low_T_index = iTmin
+      up_T_index = iTmin+1
     else
-        call get_low_up_index(T, logT_list, iTmin, iTmax, low_T_index, up_T_index)
+      call get_low_up_index(T, logT_list, iTmin, iTmax, low_T_index, up_T_index)
     endif
 
     call interpolate_KRT(low_D_index, up_D_index, low_T_index, up_T_index, &
