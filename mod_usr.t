@@ -295,14 +295,15 @@ contains
     real(8), intent(inout) :: w(ixI^S,1:nw)
 
     ! Local variable
-    integer :: ir
+    integer :: ir, ixE^L
     real(8) :: wlocal(ixI^S,1:nw), scaleheight, soundspeed(ixI^S)
     !--------------------------------------------------------------------------
 
     select case (iB)
     case(1)
-
-      call hd_to_primitive(ixI^L, ixI^L, w, x)
+      ! New upper limit extending into physical grid for primitive conversion
+      ixE^L=ixB^L;
+      ixEmax1 = ixBmax1 + 2
 
       if (use_poniatowski_bc) then
         ! Adaptive lower boundary mass density
@@ -316,6 +317,8 @@ contains
         w(ixB^S,rho_) = rhosurf * exp( -2.0d0*x(ixBmax1+1,1) / scaleheight &
             * (1.0d0 - 1.0d0 / x(ixB^S,1)) )
 
+        call hd_to_primitive(ixI^L, ixE^L, w, x)
+
         ! Radial velocity field (from continuity)
         do ir = ixBmax1,ixBmin1,-1
           w(ir,mom(1)) = w(ir+1,mom(1)) * w(ir+1,rho_) * x(ir+1,1)**2.0d0 &
@@ -324,6 +327,8 @@ contains
       else
         ! Standard conditions
         w(ixB^S,rho_) = rhosurf
+
+        call hd_to_primitive(ixI^L, ixE^L, w, x)
 
         ! Radial velocity field (constant slope extrapolation: d^vr/dr^2 = 0)
         do ir = ixBmax1,ixBmin1,-1
@@ -336,21 +341,24 @@ contains
       w(ixB^S,mom(1)) = min(w(ixB^S,mom(1)), csound)
       w(ixB^S,mom(1)) = max(w(ixB^S,mom(1)), -csound)
 
-      call hd_to_conserved(ixI^L, ixI^L, w, x)
+      call hd_to_conserved(ixI^L, ixE^L, w, x)
 
     case(2)
+      ! New lower limit extending into physical grid for primitive conversion
+      ixE^L=ixB^L;
+      ixEmin1 = ixBmin1 - 2
+
       ! Constant extrapolation of all
-
-      call hd_to_primitive(ixI^L, ixI^L, w, x)
-
       w(ixB^S,rho_) = w(ixBmin1-1,rho_) * (x(ixBmin1-1,1) / x(ixB^S,1))**2.0d0
+
+      call hd_to_primitive(ixI^L, ixE^L, w, x)
 
       do ir = ixBmin1,ixBmax1
         w(ir,mom(1)) = w(ir-1,mom(1)) &
              + ( w(ixBmin1-1,mom(1)) - w(ixBmin1-2,mom(1)) )
       enddo
 
-      call hd_to_conserved(ixI^L, ixI^L, w, x)
+      call hd_to_conserved(ixI^L, ixE^L, w, x)
 
     case default
       call mpistop("BC not specified")
@@ -584,7 +592,7 @@ contains
     real(8), intent(out) :: gravity_field(ixI^S,ndim)
     !--------------------------------------------------------------------------
 
-    gravity_field(ixO^S,:) = 0.0d0
+    gravity_field(ixI^S,:) = 0.0d0
 
     ! Only in radial direction
     gravity_field(ixO^S,1) = -gmstar / x(ixO^S,1)**2.0d0
