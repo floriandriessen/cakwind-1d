@@ -1,8 +1,8 @@
 !==============================================================================
-! 1D CAK wind module for launching a spherically symmetric line-driven wind
-! from the stellar surface
+! 1-D CAK wind module for launching a spherically symmetric line-driven wind
+! from the stellar surface.
 !
-! Coded up by Flo for his KU Leuven PhD thesis 2018/2022
+! Coded up by Flo for his KU Leuven PhD thesis 2018/2022.
 !
 ! Options for wind to be specified in usr.par file:
 !   ifrc = 0  : radially streaming CAK wind
@@ -39,9 +39,9 @@ module mod_usr
 
 contains
 
-  !============================================================================
-  ! This routine should set user methods, and activate the physics module.
-  !============================================================================
+!==============================================================================
+! This routine should set user methods, and activate the physics module.
+!==============================================================================
   subroutine usr_init()
 
     call usr_params_read(par_files)
@@ -73,9 +73,9 @@ contains
 
   end subroutine usr_init
 
-  !============================================================================
-  ! Read in the usr.par file with a user problem specific list.
-  !============================================================================
+!==============================================================================
+! Read in the usr.par file with a user problem specific list.
+!==============================================================================
   subroutine usr_params_read(files)
 
     character(len=*), intent(in) :: files(:)
@@ -93,10 +93,10 @@ contains
 
   end subroutine usr_params_read
 
-  !============================================================================
-  ! Initialise global variables to be used during run. This subroutine is read
-  ! at the first iteration and after a restart.
-  !============================================================================
+!==============================================================================
+! Initialise global variables to be used during run. This subroutine is read
+! at the first iteration and after a restart.
+!==============================================================================
   subroutine initglobaldata_usr
 
     use mod_cak_opacity, only: init_cak_table
@@ -237,10 +237,10 @@ contains
 
   end subroutine initglobaldata_usr
 
-  !============================================================================
-  ! Calculate the initial conditions on the grid for the stellar wind outflow.
-  ! After a restart this subroutine will not be accessed.
-  !============================================================================
+!==============================================================================
+! Calculate the initial conditions on the grid for the stellar wind outflow.
+! After a restart this subroutine will not be accessed.
+!==============================================================================
   subroutine initial_conditions(ixI^L, ixO^L, w, x)
 
     ! Subroutine arguments
@@ -284,9 +284,9 @@ contains
 
   end subroutine initial_conditions
 
-  !============================================================================
-  ! Non-standard boundary conditions at inner + outer edge boundary.
-  !============================================================================
+!==============================================================================
+! Non-standard boundary conditions at inner + outer edge boundary.
+!==============================================================================
   subroutine special_bound(qt, ixI^L, ixB^L, iB, w, x)
 
     ! Subroutine arguments
@@ -361,7 +361,7 @@ contains
       call hd_to_conserved(ixI^L, ixE^L, w, x)
 
     case default
-      call mpistop("BC not specified")
+      call mpistop("usr_special_bc: BC not specified.")
     end select
 
   contains
@@ -428,9 +428,9 @@ contains
 
   end subroutine special_bound
 
-  !============================================================================
-  ! Calculate extra source terms for the problem.
-  !============================================================================
+!==============================================================================
+! Calculate extra source terms for the problem.
+!==============================================================================
   subroutine line_force(qdt, ixI^L, ixO^L, iw^LIM, qtC, wCT, qt, w, x)
 
     use mod_cak_opacity, only: set_cak_opacity
@@ -536,7 +536,7 @@ contains
            / ( (1.0d0 - alpha(ixO^S)) * tausob(ixO^S) )
 
     case default
-      call mpistop("Error in wind option. Take a valid ifrc=0,1,2")
+      call mpistop("usr_source: Error in wind option. Take a valid ifrc=0,1,2")
     end select
 
     gcak(ixO^S) = gcak(ixO^S) * fdfac(ixO^S)
@@ -557,9 +557,9 @@ contains
 
   end subroutine line_force
 
-  !============================================================================
-  ! Adjust the hydrodynamic timestep by taking extra forces into account.
-  !============================================================================
+!==============================================================================
+! Adjust the hydrodynamic timestep by taking extra source terms into account.
+!==============================================================================
   subroutine special_dt(w, ixI^L, ixO^L, dtnew, dx^D, x)
 
     ! Subroutine arguments
@@ -580,9 +580,9 @@ contains
 
   end subroutine special_dt
 
-  !============================================================================
-  ! Set the gravitational field of the problem.
-  !============================================================================
+!==============================================================================
+! Set the gravitational field of the problem.
+!==============================================================================
   subroutine stellar_gravity(ixI^L, ixO^L, wCT, x, gravity_field)
 
     ! Subroutine arguments

@@ -1,11 +1,12 @@
-!=================================================
-! Project : 1D isothermal CAK wind
+!==============================================================================
+! Project : 1-D isothermal CAK wind
 !
-! Aim     : (mainly) serves to make a relaxed wind
-!           for input in other wind models
+! Aim     : (mainly) serves to make a relaxed symmetric wind for input in
+!           multi-dimensional CAK wind models. New addition is the study of
+!           varying line-force parameters from Poniatowski+ (2022), A&A 667
 !
-! Config  : setup.pl -d=1
-!=================================================
+! Config  : setup.pl -d=1 -v=1
+!==============================================================================
 
 &filelist
   base_filename = 'test/cak'
@@ -15,12 +16,12 @@
   itsave(1,1)  = 0
   itsave(1,2)  = 0
   ditsave_log  = 1000
-  dtsave_dat   = 1.0d-1
+  dtsave_dat   = 0.1
 /
 
 &stoplist
-  dtmin    = 1.0d-20
-  time_max = 5.0d0
+  dtmin    = 1.0e-10
+  time_max = 3.0
 /
 
 &methodlist
@@ -37,32 +38,32 @@
 &meshlist
   domain_nx1         = 2000
   block_nx1          = 500
-  xprobmin1          = 1.0d0
-  xprobmax1          = 10.0d0
+  xprobmin1          = 1.0
+  xprobmax1          = 10.0
   stretch_dim(1)     = 'uni'
   qstretch_baselevel = 1.002
 /
 
 &paramlist
-  courantpar = 0.3d0
+  courantpar = 0.3
 /
 
 &hd_list
   hd_gravity = .true.
   hd_energy  = .false.
-  hd_gamma   = 1.0d0
+  hd_gamma   = 1.0
 /
 
 &star_list
-  mstar_sol     = 50.0d0
-  rstar_sol     = 20.0d0
-  twind_cgs     = 4.0d4
-  rhosurf_cgs   = 1.0d-11
-  cak_alpha     = 0.65d0
-  gayley_qbar   = 2000.0d0
-  gayley_q0     = 0.00395d0
-  beta          = 0.8d0
+  mstar_sol     = 50.0
+  rstar_sol     = 20.0
+  twind_cgs     = 4.0e4
+  rhosurf_cgs   = 1.0e-11
+  cak_alpha     = 0.65
+  gayley_qbar   = 2000.0
+  gayley_q0     = 0.00395
+  beta          = 0.8
   ifrc          = 1
-  tstat         = 2.0d0
-  use_lte_table = .true.
+  tstat         = 2.0
+  use_lte_table = .false.
 /
