@@ -23,7 +23,7 @@ module mod_usr
   ! Dimensionless variables of relevant variables
   real(8) :: lstar, mstar, rstar, rhosurf, twind, kappae, vinf, mdot
   real(8) :: csound, clight, gmstar
-  logical :: use_lte_table = .false., custom_tabledir=.true.
+  logical :: use_lte_table = .false.
 
   ! Variables for adaptive surface mass density
   logical :: use_poniatowski_bc = .false.
@@ -130,8 +130,8 @@ contains
          * (gayley_qbar * gammae / (1.0d0 - gammae))**( (1.0d0 - cak_alpha) &
          / cak_alpha )
 
-    ! Initialise CAK tables
-    if (use_lte_table) call init_cak_table('./lte-tables', custom_tabledir)
+    ! Initialise CAK tables in src/tables/CAK_tables
+    if (use_lte_table) call init_cak_table('Y02400')
 
     ! Code units
     unit_length        = rstar_cgs

@@ -7,9 +7,9 @@ Make HD model of a CAK wind from a OB star using MPI-AMRVAC. The stellar wind is
 
 ## Setup
 
-After cloning go into the local directory and fetch AMRVAC makefile (assuming you have exported the `AMRVAC_DIR` variable in the `.bashrc` on linux or `.bash_profile` on macos)
+After cloning go into the local directory and fetch AMRVAC makefile (assuming you have exported the `AMRVAC_DIR` variable in the `.bashrc` on Linux or `.bash_profile` on macOS)
 ```
-$ setup.pl -d=1
+$ setup.pl -d=1 -v=1
 ```
 and do a make (if the AMRVAC source was not compiled yet, this will be done now as well)
 ```
@@ -18,21 +18,11 @@ $ make -j
 
 ## How-to
 
-### Additional user setup
-
-In order to run this problem without problems we have to make some modifications to the AMRVAC source files. To do this without harming/messing up the AMRVAC source files we copy the required source files to our local CAK directory. The included `local.make` file ensures that AMRVAC sees our modified, local source file and compiles this one without using the original source file in the compilation.
-
-The only source file required is:
-```
-mod_cak_opacity.t
-```
-living in the `<path to your amrvac>/amrvac/src/rhd` directory. Copy it to the local CAK directory (renamining it is optional, e.g., `my_mod_cak_opacity.t`). For reasons unknown the absolute path to the tables is not found when using the module from the source directory. This has to be fixed in the future (talk to Nico).
-
 ### Performing a simulation
 
-Simulations can be run for a specific OB star using the .par file. The goal of the CAK simulations is to create a relaxed, steady-state wind model to be used as initial wind condition in various contexts. The current .par file has stellar parameters corresponding to a typical OSG (Zeta Puppis) in the Galaxy.
+Simulations can be run for a specific OB star using the .par file. The goal of the CAK simulations is to create a relaxed, steady-state wind model to be used as initial wind condition in various contexts. The current .par file has stellar parameters corresponding to a typical O-supergiant (Zeta Puppis) in the Galaxy.
 
-Given that the CAK simulations are rather fast there are no options included in the .par file to do restarts or resumes. Depending on the stellar parameters the runtime can be best adjusted based on the unit_time that is printed to the screen at the start of the simulation.
+Given that the CAK simulations are rather fast there are no options included in the .par file to do restarts or resumes. Depending on the stellar parameters the runtime can be best adjusted based on the `unit_time` variable that is printed to the screen at the start of the simulation.
 
 ## Additional user parameters
 
@@ -56,7 +46,7 @@ Additionally, a `star_list` is specified in the .par file containing variables s
 
 ## Notice
 
-Tested with AMRVAC version 3.2, 3.1, 3.0, and 2.2.
+Tested with AMRVAC version 3.3, 3.2, 3.1, 3.0, and 2.2.
 
 ## Known issues
 
